@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Deal Desk for Fragment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fragment+Mono&display=swap">
+<style>
+:root{
+  --bg:#FAFAF9; --surface:#FFFFFF; --surface-2:#F3F3F1; --line:#E6E6E3; --line-2:#D4D4D0;
+  --cream:#0A0A0A; --text:#1C1C1B; --muted:#5E5E5B; --faint:#8C8C88; --on-primary:#FFFFFF;
+  --green:#137A4B; --green-dim:#E6F4EC; --green-line:#B7DEC8; --amber:#94620B; --amber-dim:#FBF1DE; --amber-line:#EBD3A3;
+  --red:#B4332A; --red-dim:#FBE9E7; --red-line:#EFC2BD; --violet:#4B44C6; --violet-dim:#EDECFC; --violet-line:#C9C6F3;
+  --serif:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif; --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"Fragment Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B0B0B; --surface:#141414; --surface-2:#1B1B1B; --line:#262626; --line-2:#363636;
+  --cream:#F5F5F4; --text:#E7E7E5; --muted:#A3A3A0; --faint:#73736F; --on-primary:#0B0B0B;
+  --green:#5CC492; --green-dim:#12291D; --green-line:#24543B; --amber:#E2B566; --amber-dim:#2E2412; --amber-line:#5A4722;
+  --red:#EC8B7E; --red-dim:#2E1714; --red-line:#5A2C25; --violet:#A39CF4; --violet-dim:#1F1C3D; --violet-line:#3B3770;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0B0B0B; --surface:#141414; --surface-2:#1B1B1B; --line:#262626; --line-2:#363636;
+  --cream:#F5F5F4; --text:#E7E7E5; --muted:#A3A3A0; --faint:#73736F; --on-primary:#0B0B0B;
+  --green:#5CC492; --green-dim:#12291D; --green-line:#24543B; --amber:#E2B566; --amber-dim:#2E2412; --amber-line:#5A4722;
+  --red:#EC8B7E; --red-dim:#2E1714; --red-line:#5A2C25; --violet:#A39CF4; --violet-dim:#1F1C3D; --violet-line:#3B3770;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.55;margin:0;padding-inline:20px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1280px;margin:0 auto;padding-block:0 56px}
+h1,h2,h3{font-family:var(--serif);font-weight:500;letter-spacing:-.02em;color:var(--cream);margin:0;text-wrap:balance}
+h1{font-size:32px;line-height:1.1} h2{font-size:24px;line-height:1.15} h3{font-size:16px;line-height:1.3}
+p{margin:0} a{color:var(--cream)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green)}
+.mono{font-family:var(--mono)} .muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:12.5px}
+nav{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:500;color:var(--cream);font-size:16px}
+.brand span{color:var(--faint);font-weight:400}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{background:none;border:1px solid transparent;border-radius:5px;padding:6px 12px;color:var(--muted);cursor:pointer;font-size:13.5px}
+.tab[aria-selected="true"]{color:var(--cream);border-color:var(--line-2);background:var(--surface)}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:transparent;color:var(--text);border-radius:5px;padding:7px 12px;cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap;text-decoration:none}
+.btn:hover{border-color:var(--muted)} .btn.primary{background:var(--cream);color:var(--on-primary);border-color:var(--cream)} .btn.primary:hover{opacity:.88}
+.btn.danger{color:var(--red);border-color:var(--red-line)} .btn:disabled{opacity:.5;cursor:not-allowed} .btn.sm{padding:4px 9px;font-size:12px}
+input,select,textarea{background:var(--bg);border:1px solid var(--line-2);border-radius:5px;padding:7px 9px;width:100%;min-width:0;font-size:13.5px}
+textarea{resize:vertical;line-height:1.5}
+input[type=checkbox]{width:auto}
+label.f{display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);min-width:0}
+label.f input,label.f select,label.f textarea{font-family:var(--sans);letter-spacing:0;text-transform:none;color:var(--text)}
+label.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+body.team .owner-only{display:none!important}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
+.banner{margin-top:14px;padding:10px 14px;border:1px solid var(--amber-line);background:var(--amber-dim);color:var(--amber);border-radius:6px;font-size:13px}
+.banner.err{border-color:var(--red-line);background:var(--red-dim);color:var(--red)}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;padding-block:26px 18px}
+.head p{max-width:64ch}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar input{max-width:260px} .toolbar select{max-width:210px}
+.split{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.35fr);gap:20px;align-items:start}
+.split.even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:980px){.split,.split.even{grid-template-columns:minmax(0,1fr)}}
+.split>*{min-width:0}
+.list{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px 14px;border:0;border-bottom:1px solid var(--line);cursor:pointer;background:transparent;text-align:left;width:100%}
+.row:last-child{border-bottom:0} .row:hover{background:var(--surface)} .row[aria-current="true"]{background:var(--surface-2)}
+.row .name{font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .meta{grid-column:1/-1;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;padding:2px 7px;border-radius:4px;border:1px solid var(--line-2);color:var(--muted);white-space:nowrap}
+.chip.t1,.chip.ok{color:var(--green);background:var(--green-dim);border-color:var(--green-line)}
+.chip.t2{color:var(--violet);background:var(--violet-dim);border-color:var(--violet-line)}
+.chip.t3,.chip.warn{color:var(--amber);background:var(--amber-dim);border-color:var(--amber-line)}
+.chip.out{color:var(--faint)} .chip.red{color:var(--red);background:var(--red-dim);border-color:var(--red-line)}
+.empty{border:1px dashed var(--line-2);border-radius:8px;padding:28px;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.panel{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.panel+.panel{margin-top:14px}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.panel-b{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.scores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.score{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--bg)}
+.score b{display:block;font-family:var(--mono);font-weight:400;font-size:26px;color:var(--cream);line-height:1.1;font-variant-numeric:tabular-nums}
+.score span{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-weight:400;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.tablewrap{overflow-x:auto}
+.signal{border-left:2px solid var(--line-2);padding-left:10px;display:flex;flex-direction:column;gap:3px}
+.src{font-family:var(--mono);font-size:11px;color:var(--muted);word-break:break-all}
+.contact{border:1px solid var(--line);border-radius:6px;padding:12px;background:var(--bg);display:flex;flex-direction:column;gap:10px}
+.contact.ph{border-style:dashed}
+.contact-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.draft textarea{min-height:180px;font-size:13.5px}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note{font-size:12px;color:var(--muted)} .warntxt{font-size:12px;color:var(--amber)} .errtxt{font-size:12.5px;color:var(--red)} .okline{font-size:12.5px;color:var(--green)}
+.stages{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--line);border-radius:8px}
+.stage{padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.stage+.stage{border-left:1px solid var(--line)}
+.stage h3{font-size:18px}
+.stage .st{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.stage.on .st{color:var(--amber)} .stage.done .st{color:var(--green)}
+.stage p{font-size:12.5px;color:var(--muted)}
+@media (max-width:980px){.stages{grid-template-columns:repeat(2,minmax(0,1fr))}.stage+.stage{border-left:0;border-top:1px solid var(--line)}}
+.log{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px;max-height:360px;overflow:auto}
+.log .e{color:var(--red)} .log .k{color:var(--green)}
+.keyrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.keyrow:last-child{border-bottom:0}
+@media (max-width:640px){.keyrow{grid-template-columns:1fr}}
+.gate{min-height:70vh;display:flex;align-items:center;justify-content:center}
+.gate form{max-width:380px;width:100%;display:flex;flex-direction:column;gap:12px}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--red-line);background:var(--red-dim);border-radius:6px;font-size:13px}
+[hidden]{display:none!important}
+.icp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:980px){.icp-grid{grid-template-columns:minmax(0,1fr)}}
+.bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;min-width:60px}
+.bar i{display:block;height:100%;background:var(--cream)}
+.fmt{border:1px solid var(--line);border-radius:6px;padding:12px;background:var(--bg);display:flex;flex-direction:column;gap:6px}
+.fmt pre{margin:0;white-space:pre-wrap;font-family:var(--sans);font-size:13px;color:var(--muted);line-height:1.55}
+.foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--faint);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.thm{background:none;border:1px solid var(--line-2);border-radius:5px;padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--muted);cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <div class="brand">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/><path d="M11 7h6v6"/></svg>
+    Deal Desk <span>/ for Fragment</span>
+  </div>
+  <div class="tabs" role="tablist" id="tabs" hidden>
+    <button class="tab" role="tab" data-view="pipeline" aria-selected="true">Run</button>
+    <button class="tab" role="tab" data-view="accounts" aria-selected="false">Accounts</button>
+    <button class="tab" role="tab" data-view="people" aria-selected="false">People</button>
+    <button class="tab" role="tab" data-view="icp" aria-selected="false">ICP</button>
+    <button class="tab" role="tab" data-view="registry" aria-selected="false">Company registry</button>
+    <button class="tab" role="tab" data-view="data" aria-selected="false">Import and export</button>
+    <button class="tab" role="tab" data-view="settings" aria-selected="false">Settings</button>
+  </div>
+</nav>
+<div id="banner" class="banner" hidden></div>
+
+<section id="view-gate" class="gate">
+  <form id="gateForm" class="panel" style="padding:24px">
+    <div class="eyebrow">Private workspace</div>
+    <h2>Enter the access code</h2>
+    <p class="muted small">Use the code you were given. It's kept in this browser so you don't have to type it again.</p>
+    <label class="f" for="gateCode">Access code<input id="gateCode" type="password" autocomplete="current-password" required></label>
+    <div class="row-actions"><button class="btn primary" type="submit">Open Deal Desk</button><span id="gateMsg" class="small"></span></div>
+  </form>
+</section>
+
+<section id="view-pipeline" hidden>
+  <div class="head">
+    <div><div class="eyebrow">Agent</div><h1 style="margin-top:10px">Run the pipeline</h1></div>
+    <p class="muted">One run finds companies hiring ledger, payments and billing engineers, skips anyone already in the registry or already a Fragment customer, researches how money moves through each product, scores it against the Fragment ICP, finds peers at the same stage, finds the payments lead, CTO and finance lead for Tier 1, and drafts first emails. Nothing is sent until you approve it.</p>
+  </div>
+  <div id="setupChecklist"></div>
+  <div class="stages" id="stages"></div>
+  <div class="row-actions" style="margin-block:16px">
+    <button class="btn primary" type="button" id="runBtn">Run full pipeline</button>
+    <button class="btn" type="button" id="runSkipSource">Run without sourcing</button>
+    <button class="btn" type="button" id="stopBtn" hidden>Stop after this step</button>
+    <span class="small" id="runMsg"></span>
+  </div>
+  <div class="small faint" id="usageLine" style="margin:-6px 0 14px"></div>
+  <div class="split even">
+    <div class="panel"><div class="panel-h"><h3>This run</h3><span class="small faint" id="runCount"></span></div><div class="panel-b"><div class="log" id="runLog"><span class="faint">Press Run to start. Each step shows here as it finishes.</span></div></div></div>
+    <div class="panel"><div class="panel-h"><h3>History</h3><button class="btn sm" type="button" id="refreshLog">Refresh</button></div><div class="panel-b"><div class="log" id="histLog"></div></div></div>
+  </div>
+</section>
+
+<section id="view-accounts" hidden>
+  <div class="head">
+    <div><div class="eyebrow">Outbound pipeline</div><h1 style="margin-top:10px">Accounts</h1></div>
+    <p class="muted">Every company the agent has kept, scored on fit (segment, ledger stack, stage, HQ, money movement) and timing (signals that decay over time). Open one to see its signals, people and drafts.</p>
+  </div>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Search accounts" aria-label="Search accounts">
+    <select id="tierFilter" aria-label="Filter by tier"><option value="all">All tiers</option><option value="1">Tier 1: reach out now</option><option value="2">Tier 2: watch</option><option value="3">Tier 3: check fit</option><option value="out">Out or blocked</option><option value="unscored">Not researched</option></select>
+    <select id="srcFilter" aria-label="Filter by source"><option value="all">All sources</option><option value="jobs">From job postings</option><option value="comp">Peers</option><option value="manual">Added or imported</option></select>
+    <span class="faint small" id="count"></span>
+    <span style="flex:1"></span>
+    <span class="small" id="sendMsg"></span>
+    <button class="btn primary" type="button" id="sendAll">Send approved emails</button>
+  </div>
+  <div class="split"><div id="list"></div><div id="detail"></div></div>
+</section>
+
+<section id="view-people" hidden>
+  <div class="head">
+    <div><div class="eyebrow">Sourced contacts</div><h1 style="margin-top:10px">People</h1></div>
+    <p class="muted">Everyone found or added so far, ordered by account tier. Open a LinkedIn profile to check they're the right person before any email goes out.</p>
+  </div>
+  <div class="toolbar"><input id="pq" type="search" placeholder="Search people or companies" aria-label="Search people"><select id="pRole" aria-label="Filter by role"><option value="all">All roles</option></select><span class="faint small" id="pCount"></span></div>
+  <div class="list tablewrap" id="people"></div>
+</section>
+
+<section id="view-icp" hidden>
+  <div class="head">
+    <div><div class="eyebrow">Model</div><h1 style="margin-top:10px">Who Fragment sells to</h1></div>
+    <p class="muted">The scoring model behind every account, built from Fragment's public site: the customers page (marketplaces, brokers, fintechs), per-entry pricing, and the Ledgers, Payments and Recon products. Fit is out of 50, timing is out of 50. Tier 1 needs fit of 35 or more and timing of 20 or more. Edit <span class="mono">api/_lib/icp.js</span> to retune.</p>
+  </div>
+  <div id="icpBody"></div>
+</section>
+
+<section id="view-registry" hidden>
+  <div class="head">
+    <div><div class="eyebrow">Memory</div><h1 style="margin-top:10px">Company registry</h1></div>
+    <p class="muted">Every company the agent has ever seen, kept or not. Each run checks this list first, so the same company is never added or researched twice. Excluded companies stay here with the reason.</p>
+  </div>
+  <div class="toolbar"><input id="rq" type="search" placeholder="Search companies" aria-label="Search registry"><select id="rStatus" aria-label="Filter by status"><option value="all">All statuses</option><option value="account">Kept as account</option><option value="excluded">Excluded</option><option value="removed">Removed</option></select><span class="faint small" id="rCount"></span></div>
+  <div class="list tablewrap" id="registry"></div>
+</section>
+
+<section id="view-data" hidden>
+  <div class="head">
+    <div><div class="eyebrow">Data</div><h1 style="margin-top:10px">Import and export</h1></div>
+    <p class="muted">Export everything to Excel, or bring companies in by hand: paste a jobs feed (for example Tsenta's recommendations page), add one company, or import a CSV or a Deal Desk JSON file.</p>
+  </div>
+  <div class="split even">
+    <div>
+      <div class="panel"><div class="panel-h"><h3>Export to Excel</h3></div><div class="panel-b">
+        <p class="note">One workbook with five sheets: Accounts, Contacts, Signals, Drafts and Company registry.</p>
+        <div class="row-actions"><button class="btn primary" type="button" id="exportBtn">Download Excel</button><span class="small" id="exportMsg"></span></div>
+      </div></div>
+      <!-- Tsenta via Claude in Chrome: hidden for now; remove "hidden" to bring it back -->
+      <div class="panel" id="tsentaPanel" hidden><div class="panel-h"><h3>Pull from Tsenta with Claude in Chrome</h3></div><div class="panel-b">
+        <p class="note">Opens Tsenta and copies an instruction for Claude in Chrome. Paste it into the Claude side panel, or save it once as a shortcut (for example <b style="font-weight:500">/tsenta</b>) so it's one click after that. Claude reads your recommendations, enters them below and presses Import. The first time, Tsenta asks you to sign in or create an account; Claude stops and lets you do that.</p>
+        <label class="f" for="tsentaUrl">Tsenta page<input id="tsentaUrl" type="url"></label>
+        <div class="row-actions"><button class="btn primary" type="button" id="tsentaBtn">Pull from Tsenta</button><span class="small" id="tsentaMsg"></span></div>
+        <details style="margin-top:10px"><summary class="small faint">Show the instruction</summary><textarea id="tsentaPrompt" rows="9" readonly style="margin-top:8px"></textarea></details>
+      </div></div>
+      <div class="panel"><div class="panel-h"><h3>Paste a jobs feed</h3></div><div class="panel-b">
+        <p class="note">Select all on a job-board page, copy, and paste here. Claude pulls out the hiring companies; known and excluded ones are skipped.</p>
+        <label class="f" for="feedSource">Source<input id="feedSource" placeholder="e.g. Wellfound, YC Work at a Startup"></label>
+        <label class="f" for="feed">Pasted text<textarea id="feed" rows="6"></textarea></label>
+        <div class="row-actions"><button class="btn primary" type="button" id="feedBtn">Import feed</button><span class="small" id="feedMsg"></span></div>
+      </div></div>
+    </div>
+    <div>
+      <form class="panel" id="addForm" novalidate><div class="panel-h"><h3>Add one company</h3></div><div class="panel-b">
+        <div class="grid2"><label class="f" for="a-name">Company<input id="a-name"></label><label class="f" for="a-domain">Domain (optional)<input id="a-domain" placeholder="company.com"></label></div>
+        <label class="f" for="a-notes">Notes<textarea id="a-notes" rows="2"></textarea></label>
+        <div class="row-actions"><button class="btn primary" type="submit">Add company</button><span class="small" id="addMsg"></span></div>
+      </div></form>
+      <div class="panel"><div class="panel-h"><h3>Import CSV or JSON</h3></div><div class="panel-b">
+        <p class="note">CSV needs a company column; domain, segment, notes and stage are optional. JSON can be a Deal Desk export, including contacts.</p>
+        <input type="file" id="fileIn" accept=".csv,.json,application/json,text/csv" aria-label="Choose a CSV or JSON file">
+        <div class="row-actions"><button class="btn primary" type="button" id="fileBtn">Import file</button><span class="small" id="fileMsg"></span></div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section id="view-settings" hidden>
+  <div class="head">
+    <div><div class="eyebrow">Settings</div><h1 style="margin-top:10px">Connections and rules</h1></div>
+    <p class="muted" id="settingsIntro">Paste your own API keys here. They're encrypted on the server and never shown again, only their last four characters. Keys set as Vercel environment variables take priority and can't be changed here.</p>
+  </div>
+  <div class="split even">
+    <div>
+      <form class="panel" id="keysForm"><div class="panel-h"><h3>API keys</h3><span class="small faint">your accounts, your credits</span></div><div class="panel-b" id="keysBody"></div>
+        <div class="panel-b" style="border-top:1px solid var(--line)"><div class="row-actions"><button class="btn primary" type="submit">Save keys</button><button class="btn" type="button" id="testKeys">Test keys</button><span class="small" id="keysMsg"></span></div><div id="testOut" class="small" style="margin-top:10px"></div></div>
+      </form>
+      <div class="panel owner-only"><div class="panel-h"><h3>Team access</h3><span class="small faint" id="teamState"></span></div><div class="panel-b">
+        <p class="note">Share the site link and a team code. Everyone signed in sees and works the same accounts, people and drafts, and runs on your API keys without seeing them. The team can't change keys or limits.</p>
+        <label class="f" for="teamCode">New team code (at least 8 characters)<input id="teamCode" type="text" autocomplete="off" spellcheck="false"></label>
+        <div class="row-actions"><button class="btn primary" type="button" id="teamSave">Save team code</button><button class="btn" type="button" id="teamRemove">Turn off team access</button><span class="small" id="teamMsg"></span></div>
+      </div></div>
+      <div class="panel"><div class="panel-h"><h3>Daily limits</h3><span class="small faint">resets at midnight UTC</span></div><div class="panel-b">
+        <p class="note">Caps on paid calls for everyone using this workspace, so a stuck run can't run up a bill. A run stops cleanly when one is reached.</p>
+        <div id="limitsBody"></div>
+        <div class="row-actions owner-only"><button class="btn primary" type="button" id="limitsSave">Save limits</button><span class="small" id="limitsMsg"></span></div>
+      </div></div>
+      <div class="panel"><div class="panel-h"><h3>Finding people</h3></div><div class="panel-b">
+        <p class="note">LinkedIn and Sales Navigator have no public API for this, so each person slot links to a prefilled LinkedIn search. Apollo fills slots automatically when its key is set and your plan includes People Search. Hunter is used for emails when Apollo has none.</p>
+      </div></div>
+    </div>
+    <form class="panel" id="setForm"><div class="panel-h"><h3>Rules</h3></div><div class="panel-b">
+      <div class="note" style="margin-bottom:10px"><b style="font-weight:500">TheirStack sourcing</b> — used when a TheirStack key is set. Each run pulls only jobs posted since the last run.</div>
+      <div class="grid2">
+        <label class="f" for="ts-titles">Job titles containing (one per line; all words, any order)<textarea id="ts-titles" rows="4"></textarea></label>
+        <label class="f" for="ts-not">Skip titles containing<textarea id="ts-not" rows="4"></textarea></label>
+      </div>
+      <div class="grid2">
+        <label class="f" for="ts-tech">Technologies mentioned (TheirStack slugs; Test keys lists payments ones)<textarea id="ts-tech" rows="2"></textarea></label>
+        <label class="f" for="ts-desc">Description patterns (regex, e.g. (?i)double-entry)<textarea id="ts-desc" rows="2"></textarea></label>
+      </div>
+      <div class="grid3">
+        <label class="f" for="ts-countries">Countries (ISO codes)<input id="ts-countries" placeholder="US, CA, GB"></label>
+        <label class="f" for="ts-min">Min employees<input id="ts-min" type="number" min="0"></label>
+        <label class="f" for="ts-max">Max employees<input id="ts-max" type="number" min="0"></label>
+      </div>
+      <div class="grid3">
+        <label class="f" for="ts-age">First run: posted in last N days<input id="ts-age" type="number" min="0" max="90"></label>
+        <label class="f" for="ts-limit">Max jobs per run (credits)<input id="ts-limit" type="number" min="1" max="500"></label>
+      </div>
+      <div class="note" style="margin:6px 0 10px"><b style="font-weight:500">Job-portal search</b> — used through Firecrawl when TheirStack isn't set.</div>
+      <label class="f" for="s-roles">Roles to search for (one per line)<textarea id="s-roles" rows="5"></textarea></label>
+      <label class="f" for="s-portals">Job portals (one domain per line)<textarea id="s-portals" rows="4"></textarea></label>
+      <div class="grid3">
+        <label class="f" for="s-recency">Posting age<select id="s-recency"><option value="qdr:d">Last day</option><option value="qdr:w">Last week</option><option value="qdr:m">Last month</option><option value="">Any time</option></select></label>
+        <label class="f" for="s-maxnew">New companies per run<input id="s-maxnew" type="number" min="0" max="100"></label>
+        <label class="f" for="s-comp">Competitors per account<input id="s-comp" type="number" min="0" max="10"></label>
+      </div>
+      <div class="grid2">
+        <label class="chk" for="s-autoemail"><input type="checkbox" id="s-autoemail"> Find emails automatically (uses Apollo or Hunter credits)</label>
+        <label class="f" for="s-maxemail">Email lookups per run<input id="s-maxemail" type="number" min="0" max="100"></label>
+      </div>
+      <label class="chk" for="s-autodraft"><input type="checkbox" id="s-autodraft"> Draft first emails for Tier 1 contacts automatically</label>
+      <label class="f" for="s-exclude">Also exclude companies containing (one per line)<textarea id="s-exclude" rows="2" placeholder="Partners, open deals (public customers are excluded already)"></textarea></label>
+      <h3 style="margin-top:6px">Sender</h3>
+      <div class="grid3">
+        <label class="f" for="s-name">First name<input id="s-name" placeholder="Tom"></label>
+        <label class="f" for="s-title">Title<input id="s-title" placeholder="Co-founder"></label>
+        <label class="f" for="s-from">From email<input id="s-from" type="email" placeholder="you@fragment.dev"></label>
+      </div>
+      <label class="f" for="s-footer">Email footer (address and opt-out are required to send)<textarea id="s-footer" rows="3" placeholder="Fragment · 416 W. 13th Street, New York, NY&#10;Not relevant? Reply &quot;no&quot; and I won't follow up."></textarea></label>
+      <h3 style="margin-top:6px">Sending</h3>
+      <div class="grid3">
+        <label class="f" for="s-provider">Provider<select id="s-provider"><option value="none">Off (drafts only)</option><option value="resend">Resend</option><option value="smtp">Gmail or SMTP</option></select></label>
+        <label class="f" for="s-cap">Daily send cap<input id="s-cap" type="number" min="1" max="500"></label>
+        <label class="f" for="s-smtpuser">SMTP user<input id="s-smtpuser" placeholder="defaults to the from email"></label>
+      </div>
+      <div class="grid2">
+        <label class="f" for="s-smtphost">SMTP host<input id="s-smtphost"></label>
+        <label class="f" for="s-smtpport">SMTP port<input id="s-smtpport" type="number"></label>
+      </div>
+      <label class="f" for="s-optout">Opt-out list (emails or domains, one per line)<textarea id="s-optout" rows="2"></textarea></label>
+      <div class="grid2">
+        <label class="f" for="s-msmart">Model for research and drafts<input id="s-msmart"></label>
+        <label class="f" for="s-mfast">Model for reading job feeds<input id="s-mfast"></label>
+      </div>
+      <div class="row-actions"><button class="btn primary" type="submit">Save rules</button><span class="small" id="setMsg"></span><span style="flex:1"></span><button class="btn sm" type="button" id="signOut">Sign out of this browser</button></div>
+    </div></form>
+  </div>
+</section>
+<footer class="foot"><span>Independent work sample by Harshit Singh. Not affiliated with or endorsed by Fragment; built only from Fragment's public website.</span><button class="thm" type="button" id="themeBtn">Theme: system</button></footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const S = { data:null, sel:null, view:'pipeline', run:null, busy:{}, msgs:{}, confirmDel:null };
+const STAGE_INFO = [
+  ['source','Source','Ledger, payments and billing engineering roles from TheirStack, or job-portal search'],
+  ['research','Research','Product, money flows, ledger stack, launches, funding, score'],
+  ['competitors','Peers','Same-stage peers of strong-fit accounts'],
+  ['people','People','Payments lead, CTO and finance lead for Tier 1'],
+  ['emails','Emails','Look up work emails (Apollo, Hunter)'],
+  ['drafts','Drafts','First email from the matching format']
+];
+const ORDER = ['source','research','competitors','research','people','emails','drafts'];
+
+let CODE = ''; try { CODE = localStorage.getItem('dd-code') || ''; } catch(e){}
+async function api(path, body){
+  const r = await fetch('/api/' + path, { method: body ? 'POST' : 'GET', headers: { 'x-access-code': CODE, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  let j = {}; try { j = await r.json(); } catch(e){}
+  if (r.status === 401){ showGate('That access code didn\'t work.'); throw j; }
+  if (!r.ok) throw { status: r.status, ...j };
+  return j;
+}
+function banner(msg, err){ const b = $('#banner'); b.hidden = !msg; b.textContent = msg || ''; b.className = 'banner' + (err ? ' err' : ''); }
+function showGate(msg){ for (const s of document.querySelectorAll('section')) s.hidden = s.id !== 'view-gate'; $('#tabs').hidden = true; $('#gateMsg').textContent = msg || ''; $('#gateMsg').className = 'small errtxt'; }
+$('#gateForm').onsubmit = async ev => { ev.preventDefault(); CODE = $('#gateCode').value.trim(); if (!CODE) return; try { await load(); try { localStorage.setItem('dd-code', CODE); } catch(e){} setView(S.view); } catch(e){ if (e.error === 'setup') { $('#gateMsg').textContent = e.message; $('#gateMsg').className = 'small errtxt'; } } };
+$('#signOut').onclick = () => { try { localStorage.removeItem('dd-code'); } catch(e){} CODE = ''; showGate(''); };
+
+async function load(){
+  S.data = await api('state');
+  $('#tabs').hidden = false;
+  document.body.classList.toggle('team', S.data.role === 'team');
+  const st = S.data.storage;
+  banner(st.persistent ? (st.keysReadable === false ? 'Your saved API keys can\'t be read, usually because ACCESS_CODE changed. Paste them again in Settings.' : '') : 'No database is connected, so keys and accounts can\'t be saved. In Vercel, open Storage, add Upstash Redis, connect it to this project, then redeploy.', true);
+  render();
+  setTimeout(routeHash, 0);
+}
+function routeHash(){
+  if (!S.data) return;
+  const raw = location.hash.slice(1), h = ({ import: 'data', feed: 'data' })[raw] || raw;
+  if (h && h !== 'gate' && document.getElementById('view-' + h)) setView(h);
+}
+window.addEventListener('hashchange', routeHash);
+function setView(v){
+  S.view = v;
+  for (const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.dataset.view === v));
+  for (const s of document.querySelectorAll('section')) s.hidden = s.id !== 'view-' + v;
+  render();
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => setView(t.dataset.view));
+function render(){
+  if (!S.data) return;
+  if (S.view === 'pipeline') renderPipeline();
+  if (S.view === 'accounts'){ renderList(); renderDetail(); }
+  if (S.view === 'people') renderPeople();
+  if (S.view === 'registry') renderRegistry();
+  if (S.view === 'icp') renderIcp();
+  if (S.view === 'settings') renderSettings();
+  if (S.view === 'data') renderTsenta();
+}
+const M = () => S.data.model;
+const lab = (list, k) => (list.find(o => o.k === (k || '')) || list[list.length - 1] || {}).label || '';
+function tierChip(t){
+  return t === '1' ? '<span class="chip t1">Tier 1 · reach out</span>' : t === '2' ? '<span class="chip t2">Tier 2 · watch</span>' : t === '3' ? '<span class="chip t3">Tier 3 · check fit</span>' : t === 'out' ? '<span class="chip out">Out</span>' : t === 'blocked' ? '<span class="chip red">In CRM · no outreach</span>' : '<span class="chip">Not researched</span>';
+}
+function liUrl(u){ let x = String(u || '').trim(); if (!x) return ''; if (!/^https?:\/\//i.test(x)) x = 'https://' + x.replace(/^\/+/, ''); try { const o = new URL(x); if (!/(^|\.)linkedin\.com$/i.test(o.hostname)) return ''; return 'https://www.linkedin.com' + o.pathname.replace(/\/+$/, '') + '/'; } catch(e){ return ''; } }
+const fmtDate = iso => { const t = Date.parse(iso); return isNaN(t) ? '' : new Date(t).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }); };
+const fmtTime = iso => { const t = Date.parse(iso); return isNaN(t) ? '' : new Date(t).toLocaleString(undefined, { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }); };
+
+/* ---------- ICP ---------- */
+function renderIcp(){
+  const { ICP, FORMATS, PERSONAS, CUSTOMERS } = M();
+  const ptsTable = (title, note, list, max) => `<div class="panel"><div class="panel-h"><h3>${title}</h3><span class="small faint">${note}</span></div><div class="panel-b"><div class="tablewrap"><table><tbody>${list.filter(o => o.k).map(o => `<tr><td>${esc(o.label)}${o.useCase ? `<div class="small faint">${esc(o.useCase)}</div>` : ''}${o.disq ? ' <span class="chip red">disqualifies</span>' : ''}</td><td style="width:90px"><div class="bar"><i style="width:${Math.round(100 * o.pts / max)}%"></i></div></td><td class="num mono">${o.pts}</td></tr>`).join('')}</tbody></table></div></div></div>`;
+  const sigs = Object.entries(ICP.signals).sort((a, b) => b[1].w - a[1].w);
+  $('#icpBody').innerHTML = `<div class="icp-grid">
+    ${ptsTable('Segment', 'up to 15 · use case drives the email', ICP.industries, 15)}
+    ${ptsTable('Ledger stack', 'up to 15 · how balances are kept today', ICP.stack, 15)}
+    ${ptsTable('Funding stage', 'up to 10', ICP.revenue, 10)}
+    <div>${ptsTable('Money movement', 'up to 5', ICP.own, 5)}${ptsTable('HQ', 'up to 5', ICP.geo, 5)}</div>
+  </div>
+  <div class="panel" style="margin-top:14px"><div class="panel-h"><h3>Timing signals</h3><span class="small faint">weight halves every half-life · capped at 50</span></div><div class="panel-b"><div class="tablewrap"><table><thead><tr><th>Signal</th><th class="num">Weight</th><th class="num">Half-life</th><th>Email</th></tr></thead><tbody>${sigs.map(([k, v]) => `<tr><td>${esc(v.label)}</td><td class="num mono">${v.w}</td><td class="num mono">${v.hl}d</td><td class="small muted">${v.format}. ${esc(FORMATS[v.format].name)}</td></tr>`).join('')}</tbody></table></div></div></div>
+  <div class="panel"><div class="panel-h"><h3>First-email formats</h3><span class="small faint">signal first, one value line, one proof point, one question</span></div><div class="panel-b"><div class="icp-grid">${Object.entries(FORMATS).map(([n, f]) => `<div class="fmt"><span class="eyebrow">Format ${n}</span><b style="font-weight:500">${esc(f.name)}</b><span class="mono small muted">Subject: ${esc(f.subject)}</span><pre>${esc(f.body)}</pre></div>`).join('')}</div></div></div>
+  <div class="panel"><div class="panel-h"><h3>Buying committee</h3><span class="small faint">first three are filled for Tier 1</span></div><div class="panel-b"><div class="tablewrap"><table><thead><tr><th>Role</th><th>Who</th><th>What they hear</th></tr></thead><tbody>${Object.values(PERSONAS).map(p => `<tr><td>${esc(p.label)}</td><td class="small muted">${esc(p.search)}</td><td class="small">${esc(p.value)}</td></tr>`).join('')}</tbody></table></div></div></div>
+  <div class="panel"><div class="panel-h"><h3>Never contacted</h3></div><div class="panel-b"><p class="small">Existing customers from Fragment's public customers page: ${esc((CUSTOMERS || []).join(', '))}.</p><p class="small muted">Also excluded: other ledger vendors, infrastructure partners, consultancies and staffing firms, plus anything on the exclude list in Settings.</p></div></div>`;
+}
+
+/* ---------- theme ---------- */
+(function(){
+  const order = ['system','light','dark']; let t = 'system';
+  try { t = localStorage.getItem('dd-theme') || 'system'; } catch(e){}
+  const apply = () => { if (t === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t); $('#themeBtn').textContent = 'Theme: ' + t; };
+  $('#themeBtn').onclick = () => { t = order[(order.indexOf(t) + 1) % 3]; try { localStorage.setItem('dd-theme', t); } catch(e){} apply(); };
+  apply();
+})();
+
+/* ---------- pipeline ---------- */
+function renderPipeline(){
+  const k = S.data.keys, s = S.data.settings;
+  const items = [
+    [k.anthropic.set, 'Anthropic key (needed for every step)'],
+    [k.firecrawl.set, 'Firecrawl key (research; also sourcing if TheirStack is not set)'],
+    [k.theirstack.set, 'TheirStack key (recommended for sourcing; optional)'],
+    [k.apollo.set || k.hunter.set, 'Apollo or Hunter key (people and emails; optional, LinkedIn links work without it)'],
+    [!!s.sender.name, 'Sender name (needed for drafts)'],
+    [s.email.provider !== 'none' && (k.resend.set || k.smtpPass.set) && !!s.sender.fromEmail, 'Email provider and from address (needed to send; optional)']
+  ];
+  const missing = items.filter(i => !i[0]);
+  $('#setupChecklist').innerHTML = missing.length && S.data.role === 'team' ? `<div class="panel" style="margin-bottom:16px"><div class="panel-h"><h3>Some connections aren't set up</h3></div><div class="panel-b">${missing.map(i => `<span class="small"><span class="faint">○</span> ${esc(i[1])}</span>`).join('')}<span class="small faint">The workspace owner adds these. Everything else works.</span></div></div>` : missing.length ? `<div class="panel" style="margin-bottom:16px"><div class="panel-h"><h3>Finish setup</h3><button class="btn sm" type="button" onclick="setView('settings')">Open Settings</button></div><div class="panel-b">${items.map(i => `<span class="small">${i[0] ? '<span class="okline">✓</span>' : '<span class="faint">○</span>'} ${esc(i[1])}</span>`).join('')}</div></div>` : '';
+  const counts = stageCounts();
+  $('#stages').innerHTML = STAGE_INFO.map(([key, name, desc]) => {
+    const r = S.run, on = r && r.current === key, done = r && r.done?.has(key);
+    return `<div class="stage ${on ? 'on' : done ? 'done' : ''}"><span class="st">${on ? 'running' : done ? 'done' : (counts[key] != null ? counts[key] + ' waiting' : 'ready')}</span><h3>${name}</h3><p>${desc}</p></div>`;
+  }).join('');
+  $('#runBtn').disabled = !!S.run; $('#runSkipSource').disabled = !!S.run; $('#stopBtn').hidden = !S.run;
+  renderHist(); renderUsage();
+}
+function stageCounts(){
+  const a = S.data.accounts;
+  return {
+    research: a.filter(x => !x.research && !['Open deal','Customer','Opted out'].includes(x.stage)).length,
+    competitors: a.filter(x => !x.competitorOf && !x.competitorsDone && x.research && x.score.fit >= 35).length,
+    people: a.filter(x => !x.peopleDone && x.research && x.score.tier === '1').length,
+    emails: a.reduce((n, x) => n + (x.score.tier === '1' ? (x.contacts||[]).filter(c => !c.placeholder && c.name && !c.email && !c.emailLookedUp).length : 0), 0),
+    drafts: a.reduce((n, x) => n + (x.score.tier === '1' ? (x.contacts||[]).filter(c => !c.placeholder && c.email && !c.draft).length : 0), 0)
+  };
+}
+const LIMIT_LABELS = { anthropic:'Claude calls', firecrawl:'Firecrawl calls', theirstack:'TheirStack jobs', apollo:'Apollo calls', hunter:'Hunter calls' };
+function renderUsage(){
+  const u = S.data.usage || {}, l = S.data.settings.limits || {};
+  $('#usageLine').textContent = 'Used today: ' + Object.keys(LIMIT_LABELS).filter(k => S.data.keys[k]?.set).map(k => `${LIMIT_LABELS[k]} ${Number(u[k]) || 0} of ${l[k] ?? '—'}`).join(' · ');
+}
+function renderHist(){ $('#histLog').innerHTML = (S.data.log || []).map(l => `<span><span class="faint">${esc(fmtTime(l.at))}</span> ${esc(l.stage)}: ${esc(l.message)}</span>`).join('') || '<span class="faint">No runs yet.</span>'; }
+function logLine(text, cls){ const el = $('#runLog'); if (S.run && S.run.lines === 0) el.innerHTML = ''; const span = document.createElement('span'); span.className = cls || ''; span.textContent = text; el.prepend(span); if (S.run) S.run.lines++; $('#runCount').textContent = S.run ? `${S.run.lines} steps` : ''; }
+async function runPipeline(skipSource){
+  if (S.run) return;
+  S.run = { lines: 0, done: new Set(), current: null, stop: false, used: 0 };
+  $('#runMsg').textContent = ''; renderPipeline();
+  const order = skipSource ? ORDER.filter(x => x !== 'source') : ORDER;
+  let errors = 0;
+  outer: for (const stage of order){
+    S.run.current = stage; renderPipeline();
+    for (let i = 0; i < 200; i++){
+      if (S.run.stop) break outer;
+      try {
+        const r = await api('run', { stage, used: S.run.used });
+        if (r.used != null) S.run.used = r.used;
+        logLine(`${stage}: ${r.message}`, 'k');
+        (r.warnings || []).forEach(w => logLine(`${stage}: ${w}`, 'e'));
+        if (!r.remaining) break;
+      } catch(e){
+        if (e.error === 'rate_limit' && (S.run.waits = (S.run.waits || 0) + 1) <= 8){
+          logLine(`${stage}: rate limit reached, waiting 40 seconds and trying again`, 'e');
+          for (let t = 0; t < 40 && !S.run.stop; t++) await new Promise(r => setTimeout(r, 1000));
+          i--; continue;
+        }
+        errors++; logLine(`${stage}: ${e.message || 'failed'}`, 'e');
+        if (['missing_key','bad_key','setup','budget','keys_unreadable'].includes(e.error) || errors > 5) { $('#runMsg').className = 'small errtxt'; $('#runMsg').textContent = 'Run stopped: ' + (e.message || 'error'); break outer; }
+        break;
+      }
+    }
+    S.run.done.add(stage);
+  }
+  const stopped = S.run.stop; S.run = null;
+  await load().catch(() => {});
+  if (!$('#runMsg').textContent){ $('#runMsg').className = 'small okline'; $('#runMsg').textContent = stopped ? 'Stopped.' : 'Run finished. Review Tier 1 accounts and approve drafts in Accounts.'; }
+  renderPipeline();
+}
+$('#runBtn').onclick = () => runPipeline(false);
+$('#runSkipSource').onclick = () => runPipeline(true);
+$('#stopBtn').onclick = () => { if (S.run) { S.run.stop = true; $('#runMsg').textContent = 'Stopping after this step…'; } };
+$('#refreshLog').onclick = () => load().catch(() => {});
+
+/* ---------- accounts ---------- */
+function srcKind(a){ return a.competitorOf ? 'comp' : /portal|feed|tsenta|theirstack/i.test(a.source || '') ? 'jobs' : 'manual'; }
+function filtered(){
+  const q = $('#q').value.trim().toLowerCase(), tf = $('#tierFilter').value, sf = $('#srcFilter').value;
+  const rank = t => ({'1':0,'3':1,'2':2}[t] ?? (t ? 4 : 3));
+  return S.data.accounts.filter(a => {
+    if (q && !`${a.name} ${a.domain} ${a.source || ''}`.toLowerCase().includes(q)) return false;
+    if (sf !== 'all' && srcKind(a) !== sf) return false;
+    if (tf === 'all') return true; if (tf === 'unscored') return !a.score.tier; if (tf === 'out') return ['out','blocked'].includes(a.score.tier);
+    return a.score.tier === tf;
+  }).sort((x, y) => rank(x.score.tier) - rank(y.score.tier) || (y.score.fit + y.score.timing) - (x.score.fit + x.score.timing) || x.name.localeCompare(y.name));
+}
+function renderList(){
+  const el = $('#list'), all = S.data.accounts;
+  if (!all.length){ el.innerHTML = `<div class="empty"><h3>No accounts yet</h3><p class="muted">Run the pipeline to source companies from job portals, or import some by hand.</p><button class="btn primary" type="button" onclick="setView('pipeline')">Go to Run</button></div>`; $('#count').textContent = ''; return; }
+  const rows = filtered(); $('#count').textContent = `${rows.length} of ${all.length}`;
+  if (!rows.length){ el.innerHTML = '<div class="empty"><p class="muted">No accounts match these filters.</p></div>'; return; }
+  el.innerHTML = `<div class="list">${rows.map(a => {
+    const top = a.signals[0];
+    const meta = [lab(M().ICP.industries, a.industry), a.stage, a.score.tier ? `fit ${a.score.fit} · timing ${Math.round(a.score.timing)}` : null, a.competitorOf ? 'peer of ' + a.competitorOf : (top ? top.label : null)].filter(Boolean).join(' · ');
+    return `<button class="row" type="button" data-id="${esc(a.id)}" aria-current="${a.id === S.sel}"><span class="name">${esc(a.name)}</span>${tierChip(a.score.tier)}<span class="meta">${esc(meta)}</span></button>`;
+  }).join('')}</div>`;
+  el.querySelectorAll('.row').forEach(b => b.onclick = () => { S.sel = b.dataset.id; S.confirmDel = null; renderList(); renderDetail(); if (innerWidth < 980) $('#detail').scrollIntoView({ behavior:'smooth' }); });
+}
+const getA = id => S.data.accounts.find(a => a.id === id);
+function replaceAccount(acc){ const i = S.data.accounts.findIndex(a => a.id === acc.id); if (i >= 0) S.data.accounts[i] = acc; else S.data.accounts.push(acc); }
+async function act(body, key){
+  S.busy[key] = true; S.msgs[key] = null; renderDetail();
+  try { const r = await api('accounts', body); if (r.account) replaceAccount(r.account); S.msgs[key] = { ok: true, text: r.result ? (r.result.email ? `Email found via ${r.result.via}.` : `No email found via ${r.result.via}.`) : 'Saved.' }; return r; }
+  catch(e){ S.msgs[key] = { ok: false, text: e.message || 'That didn\'t work.' }; }
+  finally { S.busy[key] = false; renderList(); renderDetail(); }
+}
+const msgHtml = key => S.msgs[key] ? `<span class="small ${S.msgs[key].ok ? 'okline' : 'errtxt'}">${esc(S.msgs[key].text)}</span>` : '';
+function renderDetail(){
+  const el = $('#detail'), a = getA(S.sel);
+  if (!a){ el.innerHTML = S.data.accounts.length ? '<div class="empty"><h3>Pick an account</h3><p class="muted">Select an account to see its research, people and drafts.</p></div>' : ''; return; }
+  const r = a.research, srcs = r?.sources || [];
+  const srcLink = id => { const x = srcs.find(z => z.id === id); return x ? `<a class="src" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.url)}</a>` : ''; };
+  const ICP = M().ICP;
+  el.innerHTML = `
+  <div class="panel"><div class="panel-h"><div style="min-width:0"><h2>${esc(a.name)}</h2>
+    <p class="small muted">${a.domain ? `<a href="https://${esc(a.domain)}" target="_blank" rel="noopener">${esc(a.domain)}</a>` : 'website not found yet'}${a.source ? ' · ' + esc(a.source) : ''}${r ? ' · researched ' + esc(fmtDate(r.researchedAt)) : ''}</p></div>
+    <div class="row-actions">${tierChip(a.score.tier)}<button class="btn primary" type="button" id="doResearch" ${S.busy.research ? 'disabled' : ''}>${S.busy.research ? 'Researching…' : (r ? 'Research again' : 'Research')}</button></div></div>
+    <div class="panel-b">${msgHtml('research')}
+      <div class="scores"><div class="score"><span>Fit</span><b>${a.score.fit}<span style="font-size:14px"> / 50</span></b></div><div class="score"><span>Timing</span><b>${a.score.tier ? Math.round(a.score.timing) : '–'}<span style="font-size:14px"> / 50</span></b></div><div class="score"><span>CRM stage</span><b style="font-size:20px;padding-top:6px">${esc(a.stage)}</b></div></div>
+      ${r?.summary ? `<p>${esc(r.summary)}</p>` : '<p class="muted small">Not researched yet. Research reads the website, careers page, news and job posts, works out how money moves through the product, then scores the account.</p>'}
+      ${(r?.disqualifiers || []).length ? `<p class="warntxt">Possible disqualifiers: ${esc(r.disqualifiers.join('; '))}</p>` : ''}
+      ${a.notes ? `<p class="note">${esc(a.notes)}</p>` : ''}
+    </div></div>
+  ${(a.signals.length || r) ? `<div class="panel"><div class="panel-h"><h3>Signals</h3><span class="small faint">weight after decay</span></div><div class="panel-b">
+    ${a.signals.map(x => `<div class="signal"><div class="row-actions" style="justify-content:space-between"><b style="font-weight:500">${esc(x.label)}</b><span class="mono small">${x.cur} / ${x.weight}</span></div><q>${esc(x.quote)}</q><span class="small muted">${x.date ? esc(fmtDate(x.date)) + ` (${x.age} days ago)` : 'Date unknown'}${x.why ? ' · ' + esc(x.why) : ''}</span>${x.origin === 'feed' ? (x.url ? `<a class="src" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.url)}</a>` : `<span class="src">From ${esc(x.feed || 'a job feed')}</span>`) : srcLink(x.source)}</div>`).join('') || '<p class="muted small">No signals found.</p>'}
+    ${r?.stack ? `<div class="signal"><b style="font-weight:500">Ledger stack: ${esc(lab(ICP.stack, a.stackOverride || r.stack.landscape))}</b>${r.stack.evidence ? `<q>${esc(r.stack.evidence)}</q>` : ''}${srcLink(r.stack.source)}</div>` : ''}
+  </div></div>` : ''}
+  <div class="panel"><div class="panel-h"><h3>Fit details</h3><span class="small faint">edit to rescore</span></div><div class="panel-b">
+    <div class="tablewrap"><table><thead><tr><th>Factor</th><th>Value</th><th class="num">Points</th></tr></thead><tbody>${a.score.parts.map(p => `<tr><td>${esc(p[0])}</td><td>${esc(p[1])}</td><td class="num">${p[2]} / ${p[3]}</td></tr>`).join('')}</tbody></table></div>
+    <form id="fitForm" class="grid3">
+      ${sel('e-industry','Segment',ICP.industries,a.industry)}${sel('e-revenue','Funding stage',ICP.revenue,a.revenue)}${sel('e-geo','HQ',ICP.geo,a.geo)}${sel('e-own','Money movement',ICP.own,a.ownership)}
+      <label class="f" for="e-stack">Ledger stack<select id="e-stack"><option value="">From research</option>${ICP.stack.map(o => `<option value="${o.k}"${o.k === a.stackOverride ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>
+      <label class="f" for="e-stage">CRM stage<select id="e-stage">${ICP.stages.map(s => `<option${s === a.stage ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
+      <label class="f" for="e-careers">Careers page<input id="e-careers" value="${esc(a.careersUrl || '')}"></label>
+      <label class="f" for="e-news">Newsroom<input id="e-news" value="${esc(a.newsUrl || '')}"></label>
+      <label class="f" for="e-owner">Owner<input id="e-owner" value="${esc(a.owner || '')}"></label>
+      <label class="f" for="e-notes" style="grid-column:1/-1">Notes<textarea id="e-notes" rows="2">${esc(a.notes || '')}</textarea></label>
+      <div class="row-actions" style="grid-column:1/-1"><button class="btn" type="submit">Save changes</button>${msgHtml('fit')}</div>
+    </form></div></div>
+  <div class="panel"><div class="panel-h"><h3>People and drafts</h3></div><div class="panel-b">
+    ${(a.contacts || []).map((c, i) => c.placeholder ? phHtml(a, c, i) : contactHtml(a, c, i)).join('') || '<p class="muted small">No people yet. The People step adds them for Tier 1 accounts, or add someone below.</p>'}
+    <form id="contactForm" class="contact" novalidate><b style="font-weight:500">Add a person</b>
+      <div class="grid2"><label class="f" for="c-name">Name<input id="c-name"></label><label class="f" for="c-title">Title<input id="c-title"></label><label class="f" for="c-email">Email<input id="c-email"></label><label class="f" for="c-li">LinkedIn URL<input id="c-li"></label></div>
+      <div class="row-actions"><button class="btn" type="submit">Add person</button>${msgHtml('contact')}</div></form>
+  </div></div>
+  <div class="row-actions" style="margin-top:14px;justify-content:flex-end">${S.confirmDel === a.id ? `<div class="confirm">Delete ${esc(a.name)}? It stays in the registry as removed, so it won't be re-added. <button class="btn danger sm" type="button" id="delYes">Delete</button><button class="btn sm" type="button" id="delNo">Keep</button></div>` : '<button class="btn danger sm" type="button" id="delAsk">Delete account</button>'}</div>`;
+  bindDetail(a);
+}
+function sel(id, label, list, cur){ return `<label class="f" for="${id}">${label}<select id="${id}">${list.map(o => `<option value="${esc(o.k)}"${o.k === (cur || '') ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`; }
+function phHtml(a, c, i){
+  const p = M().PERSONAS[c.role] || M().PERSONAS.user, q = encodeURIComponent(`${a.name} ${p.kw}`), key = 'ph' + i;
+  return `<div class="contact ph" data-i="${i}" data-ph="1"><div class="contact-top"><div><b style="font-weight:500">${esc(p.label)}</b> <span class="chip">to fill</span><br><span class="small muted">Look for: ${esc(p.search)}</span></div><button class="btn sm c-remove" type="button">Remove slot</button></div>
+    <div class="row-actions"><a class="btn sm" href="https://www.linkedin.com/sales/search/people?keywords=${q}" target="_blank" rel="noopener">Search Sales Navigator ↗</a><a class="btn sm" href="https://www.linkedin.com/search/results/people/?keywords=${q}" target="_blank" rel="noopener">Search LinkedIn ↗</a>${S.data.keys.apollo.set ? '<span class="small faint">Apollo found no match for this role</span>' : '<span class="small faint">Add an Apollo key to fill slots automatically</span>'}</div>
+    <div class="grid2"><label class="f">Name<input class="ph-name"></label><label class="f">Title<input class="ph-title"></label><label class="f">Email<input class="ph-email"></label><label class="f">LinkedIn URL<input class="ph-li"></label></div>
+    <div class="row-actions"><button class="btn sm primary ph-save" type="button">Save person</button>${msgHtml(key)}</div></div>`;
+}
+function contactHtml(a, c, i){
+  const P = M().PERSONAS, d = c.draft, key = 'c' + i, li = liUrl(c.linkedin), sent = d?.status === 'Sent';
+  const auto = a.signals[0] ? a.signals[0].format : (['homegrown_strain','app_db'].includes(a.stackOverride || a.research?.stack?.landscape || '') ? 4 : 2);
+  return `<div class="contact" data-i="${i}"><div class="contact-top"><div style="min-width:0"><b style="font-weight:500">${esc(c.name)}</b> <span class="muted">· ${esc(c.title || '')}</span>${c.source ? ` <span class="chip">${esc(c.source)}</span>` : ''}<br>
+      <span class="small">${c.email ? `<span class="mono">${esc(c.email)}</span>${c.emailStatus ? ` <span class="chip ${/verified|valid/i.test(c.emailStatus) ? 'ok' : ''}">${esc(c.emailStatus)}</span>` : ''}` : `<span class="faint">${c.emailStatus ? esc(c.emailStatus) : 'No email yet'}</span>`}</span>
+      ${li ? `<div style="margin-top:6px"><a class="btn sm" href="${esc(li)}" target="_blank" rel="noopener">View LinkedIn profile ↗</a></div>` : ''}</div>
+    <div class="row-actions"><select class="c-role" aria-label="Role in the deal" style="width:auto">${Object.entries(P).map(([k, v]) => `<option value="${k}"${k === c.role ? ' selected' : ''}>${esc(v.label)}</option>`).join('')}</select>
+      ${c.email ? '' : `<button class="btn sm c-find" type="button" ${S.busy['f' + i] ? 'disabled' : ''}>${S.busy['f' + i] ? 'Looking up…' : 'Find email'}</button>`}
+      <button class="btn sm c-remove" type="button">Remove</button></div></div>
+    ${msgHtml('f' + i)}
+    ${sent ? '' : `<div class="row-actions"><select class="c-format" aria-label="Email format" style="width:auto">${[1,2,3,4].map(n => `<option value="${n}"${n === (d?.format || auto) ? ' selected' : ''}>Format ${n}: ${esc(M().FORMATS[n].name)}${n === auto ? ' (suggested)' : ''}</option>`).join('')}</select>
+      <button class="btn sm ${d ? '' : 'primary'} c-draft" type="button" ${S.busy['d' + i] || !c.email ? 'disabled' : ''} title="${c.email ? '' : 'Add an email first'}">${S.busy['d' + i] ? 'Drafting…' : (d ? 'Redraft' : 'Draft first email')}</button>${msgHtml('d' + i)}</div>`}
+    ${d ? `<div class="draft" style="display:flex;flex-direction:column;gap:8px">
+      <label class="f">Subject<input class="d-subj" value="${esc(d.subject)}" ${sent ? 'readonly' : ''}></label>
+      <label class="f">Body<textarea class="d-body" ${sent ? 'readonly' : ''}>${esc(d.body)}</textarea></label>
+      <p class="note d-count"></p>
+      ${d.signalQuote ? `<p class="note">Built on: “${esc(d.signalQuote)}”${d.signalUrl ? ` <a class="src" href="${esc(d.signalUrl)}" target="_blank" rel="noopener">source</a>` : ''}</p>` : ''}
+      <div class="row-actions">${sent ? `<span class="chip ok">Sent ${esc(fmtTime(d.sentAt))}</span>` : `<span class="chip ${d.status === 'Approved' ? 'ok' : d.status.startsWith('Blocked') ? 'red' : ''}">${esc(d.status)}</span>
+        <button class="btn sm d-save" type="button">Save edits</button>
+        ${d.status === 'Approved' ? '<button class="btn sm d-unapprove" type="button">Back to draft</button><button class="btn sm primary d-send" type="button">Send now</button>' : '<button class="btn sm primary d-approve" type="button">Approve</button>'}`}
+        <button class="btn sm d-copy" type="button">Copy</button>${msgHtml(key)}</div></div>` : ''}
+  </div>`;
+}
+function bindDetail(a){
+  const id = a.id;
+  $('#doResearch').onclick = () => act({ action:'research', id }, 'research');
+  const da = $('#delAsk'); if (da) da.onclick = () => { S.confirmDel = id; renderDetail(); };
+  const dn = $('#delNo'); if (dn) dn.onclick = () => { S.confirmDel = null; renderDetail(); };
+  const dy = $('#delYes'); if (dy) dy.onclick = async () => { try { await api('accounts', { action:'delete', id }); S.data.accounts = S.data.accounts.filter(x => x.id !== id); S.sel = null; S.confirmDel = null; renderList(); renderDetail(); } catch(e){ S.msgs.research = { ok:false, text:e.message }; renderDetail(); } };
+  $('#fitForm').onsubmit = ev => { ev.preventDefault(); act({ action:'update', id, patch:{ industry:$('#e-industry').value, revenue:$('#e-revenue').value, geo:$('#e-geo').value, ownership:$('#e-own').value, stackOverride:$('#e-stack').value, stage:$('#e-stage').value, careersUrl:$('#e-careers').value.trim(), newsUrl:$('#e-news').value.trim(), owner:$('#e-owner').value.trim(), notes:$('#e-notes').value } }, 'fit'); };
+  $('#contactForm').onsubmit = ev => { ev.preventDefault(); act({ action:'addContact', id, contact:{ name:$('#c-name').value, title:$('#c-title').value, email:$('#c-email').value, linkedin:$('#c-li').value } }, 'contact'); };
+  $('#detail').querySelectorAll('.contact[data-i]').forEach(box => {
+    const i = Number(box.dataset.i);
+    box.querySelector('.c-remove').onclick = () => act({ action:'removeContact', id, idx:i }, 'contact');
+    if (box.dataset.ph){
+      box.querySelector('.ph-save').onclick = () => act({ action:'saveContact', id, idx:i, contact:{ name:box.querySelector('.ph-name').value, title:box.querySelector('.ph-title').value, email:box.querySelector('.ph-email').value, linkedin:box.querySelector('.ph-li').value } }, 'ph' + i);
+      return;
+    }
+    box.querySelector('.c-role').onchange = ev => act({ action:'updateContact', id, idx:i, patch:{ role: ev.target.value } }, 'c' + i);
+    const fb = box.querySelector('.c-find'); if (fb) fb.onclick = () => act({ action:'findEmail', id, idx:i }, 'f' + i);
+    const db = box.querySelector('.c-draft'); if (db) db.onclick = () => act({ action:'draft', id, idx:i, format:Number(box.querySelector('.c-format').value) }, 'd' + i);
+    const body = box.querySelector('.d-body');
+    if (body){
+      const cnt = box.querySelector('.d-count');
+      const upd = () => { const n = body.value.trim().split(/\s+/).filter(Boolean).length; cnt.textContent = `${n} words`; cnt.className = 'note d-count'; };
+      body.addEventListener('input', upd); upd();
+      const draftPatch = status => ({ action:'updateContact', id, idx:i, patch:{ draft:{ subject:box.querySelector('.d-subj').value, body:body.value, status } } });
+      const cur = a.contacts[i].draft.status;
+      const q = s => box.querySelector(s);
+      if (q('.d-save')) q('.d-save').onclick = () => act(draftPatch(cur === 'Approved' ? 'Approved' : 'Draft'), 'c' + i);
+      if (q('.d-approve')) q('.d-approve').onclick = () => act(draftPatch('Approved'), 'c' + i);
+      if (q('.d-unapprove')) q('.d-unapprove').onclick = () => act(draftPatch('Draft'), 'c' + i);
+      if (q('.d-send')) q('.d-send').onclick = async () => { S.msgs['c' + i] = null; try { const r = await api('send', { id, idx:i }); S.msgs['c' + i] = { ok: r.sent > 0, text: r.sent ? 'Sent.' : (r.errors?.[0] || r.message) }; await load(); } catch(e){ S.msgs['c' + i] = { ok:false, text:e.message }; renderDetail(); } };
+      q('.d-copy').onclick = async () => { const t = `To: ${a.contacts[i].email}\nSubject: ${box.querySelector('.d-subj').value}\n\n${body.value}`; try { await navigator.clipboard.writeText(t); S.msgs['c' + i] = { ok:true, text:'Copied.' }; } catch(e){ body.select(); S.msgs['c' + i] = { ok:false, text:'Copy blocked; the text is selected.' }; } renderDetail(); };
+    }
+  });
+}
+$('#q').oninput = renderList; $('#tierFilter').onchange = renderList; $('#srcFilter').onchange = renderList;
+$('#sendAll').onclick = async () => {
+  const n = S.data.accounts.reduce((t, a) => t + (a.contacts || []).filter(c => c.draft?.status === 'Approved').length, 0);
+  const m = $('#sendMsg');
+  if (!n){ m.className = 'small faint'; m.textContent = 'No approved drafts yet.'; return; }
+  m.className = 'small muted'; m.textContent = `Sending ${n}…`; $('#sendAll').disabled = true;
+  try { const r = await api('send', {}); m.className = 'small ' + (r.sent ? 'okline' : 'errtxt'); m.textContent = r.message + (r.errors?.length ? ' ' + r.errors[0] : ''); await load(); }
+  catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
+  finally { $('#sendAll').disabled = false; }
+};
+
+/* ---------- people ---------- */
+function renderPeople(){
+  const P = M().PERSONAS, sel = $('#pRole');
+  if (sel.options.length === 1) sel.insertAdjacentHTML('beforeend', Object.entries(P).map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`).join(''));
+  const q = $('#pq').value.trim().toLowerCase(), rf = sel.value, rank = t => ({'1':0,'3':1,'2':2}[t] ?? 3), rows = [];
+  for (const a of S.data.accounts) (a.contacts || []).forEach((c, i) => { if (c.placeholder || !c.name) return; if (rf !== 'all' && c.role !== rf) return; if (q && !`${c.name} ${c.title || ''} ${a.name}`.toLowerCase().includes(q)) return; rows.push({ a, c, i }); });
+  rows.sort((x, y) => rank(x.a.score.tier) - rank(y.a.score.tier) || x.a.name.localeCompare(y.a.name));
+  $('#pCount').textContent = `${rows.length} people`;
+  $('#people').innerHTML = rows.length ? `<table><thead><tr><th>Person</th><th>Company</th><th>Role</th><th>Email</th><th>Draft</th><th>Profile</th></tr></thead><tbody>${rows.map(({ a, c }) => { const li = liUrl(c.linkedin); return `<tr><td><b style="font-weight:500">${esc(c.name)}</b><br><span class="small muted">${esc(c.title || '')}</span></td><td><button class="btn sm p-open" type="button" data-id="${esc(a.id)}">${esc(a.name)}</button><br><span style="display:inline-block;margin-top:4px">${tierChip(a.score.tier)}</span></td><td class="small">${esc((P[c.role] || P.user).label)}</td><td class="small mono">${c.email ? esc(c.email) : '<span class="faint">none</span>'}</td><td class="small">${c.draft ? esc(c.draft.status) : '<span class="faint">none</span>'}</td><td>${li ? `<a class="btn sm" href="${esc(li)}" target="_blank" rel="noopener">LinkedIn ↗</a>` : `<a class="btn sm" href="https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(c.name + ' ' + a.name)}" target="_blank" rel="noopener">Search ↗</a>`}</td></tr>`; }).join('')}</tbody></table>` : '<div class="empty"><p class="muted">No people yet. Run the pipeline or add people on an account.</p></div>';
+  $('#people').querySelectorAll('.p-open').forEach(b => b.onclick = () => { S.sel = b.dataset.id; setView('accounts'); });
+}
+$('#pq').oninput = renderPeople; $('#pRole').onchange = renderPeople;
+
+/* ---------- registry ---------- */
+function renderRegistry(){
+  const q = $('#rq').value.trim().toLowerCase(), sf = $('#rStatus').value;
+  const rows = S.data.registry.filter(r => (sf === 'all' || r.status === sf) && (!q || `${r.name} ${r.domain || ''} ${r.reason || ''}`.toLowerCase().includes(q))).sort((x, y) => String(y.lastSeen).localeCompare(String(x.lastSeen)));
+  $('#rCount').textContent = `${rows.length} of ${S.data.registry.length} companies`;
+  const chip = s => s === 'account' ? '<span class="chip ok">Account</span>' : s === 'excluded' ? '<span class="chip warn">Excluded</span>' : `<span class="chip">${esc(s)}</span>`;
+  $('#registry').innerHTML = rows.length ? `<table><thead><tr><th>Company</th><th>Status</th><th>Reason or source</th><th>First seen</th><th>Last seen</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r.accountId ? `<button class="btn sm r-open" type="button" data-id="${esc(r.accountId)}">${esc(r.name)}</button>` : esc(r.name)}${r.domain ? `<br><span class="small faint">${esc(r.domain)}</span>` : ''}</td><td>${chip(r.status)}</td><td class="small muted">${esc(r.reason || r.source || '')}${r.competitorOf ? ' · competitor of ' + esc(r.competitorOf) : ''}</td><td class="small">${esc(fmtDate(r.firstSeen))}</td><td class="small">${esc(fmtDate(r.lastSeen))}</td></tr>`).join('')}</tbody></table>` : '<div class="empty"><p class="muted">No companies seen yet.</p></div>';
+  $('#registry').querySelectorAll('.r-open').forEach(b => b.onclick = () => { S.sel = b.dataset.id; setView('accounts'); });
+}
+$('#rq').oninput = renderRegistry; $('#rStatus').onchange = renderRegistry;
+
+/* ---------- import / export ---------- */
+$('#exportBtn').onclick = async () => {
+  const m = $('#exportMsg'); m.className = 'small muted'; m.textContent = 'Preparing…';
+  try {
+    const r = await fetch('/api/export', { headers: { 'x-access-code': CODE } });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || 'Export failed');
+    const blob = await r.blob(), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `fragment-deal-desk-${new Date().toISOString().slice(0,10)}.xlsx`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000); m.className = 'small okline'; m.textContent = 'Downloaded.';
+  } catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
+};
+/* ---------- Tsenta via Claude in Chrome ---------- */
+const TSENTA_DEFAULT = 'https://dashboard.tsenta.com/dashboard/recommendations';
+function tsentaUrl(){ return ($('#tsentaUrl').value || '').trim() || (S.data?.settings?.tsentaUrl) || TSENTA_DEFAULT; }
+function tsentaPrompt(){
+  return `Pull new job postings from Tsenta into Deal Desk.
+
+1. Open ${tsentaUrl()}. If Tsenta asks me to sign in or create an account, stop and tell me. I'll do it myself and ask you again.
+2. On the recommendations page, scroll until no more jobs load. For each job, note the company, job title, location and how long ago it was posted. Don't apply to, save or dismiss any job.
+3. Open ${location.origin}/#import (Deal Desk, already signed in on this browser).
+4. In "Paste a jobs feed", type Tsenta in Source, then paste the jobs into Pasted text, one per line: Company — Title — Location — Posted.
+5. Click "Import feed" and tell me the result shown under the button.`;
+}
+function renderTsenta(){ if (!$('#tsentaUrl').value) $('#tsentaUrl').value = S.data?.settings?.tsentaUrl || TSENTA_DEFAULT; $('#tsentaPrompt').value = tsentaPrompt(); }
+$('#tsentaUrl').onchange = async () => { const u = $('#tsentaUrl').value.trim(); $('#tsentaPrompt').value = tsentaPrompt(); try { const r = await api('settings', { settings: { tsentaUrl: u } }); S.data.settings = r.settings; } catch(e){} };
+$('#tsentaBtn').onclick = async () => {
+  const m = $('#tsentaMsg'), text = tsentaPrompt(); $('#tsentaPrompt').value = text;
+  window.open(tsentaUrl(), '_blank', 'noopener');
+  try { await navigator.clipboard.writeText(text); m.className = 'small okline'; m.textContent = 'Tsenta opened and the instruction is copied. Paste it into Claude in Chrome on that tab.'; }
+  catch(e){ m.className = 'small faint'; m.textContent = 'Tsenta opened. Copy the instruction below and paste it into Claude in Chrome.'; $('#tsentaPrompt').closest('details').open = true; $('#tsentaPrompt').select(); }
+};
+$('#feedBtn').onclick = async () => {
+  const m = $('#feedMsg'), t = $('#feed').value.trim(), src = $('#feedSource').value.trim();
+  if (!t){ m.className = 'small errtxt'; m.textContent = 'Paste the page text first.'; return; }
+  m.className = 'small muted'; m.textContent = 'Reading the feed…'; $('#feedBtn').disabled = true;
+  try { const r = await api('accounts', { action:'importFeed', text:t, source: src || 'Pasted feed' }); m.className = 'small okline'; m.textContent = `${r.message} Run the pipeline without sourcing to research them.`; $('#feed').value = ''; await load(); }
+  catch(e){ m.className = 'small errtxt'; m.textContent = e.message; } finally { $('#feedBtn').disabled = false; }
+};
+$('#addForm').onsubmit = async ev => {
+  ev.preventDefault(); const m = $('#addMsg'), name = $('#a-name').value.trim();
+  if (!name){ m.className = 'small errtxt'; m.textContent = 'Enter the company name.'; return; }
+  try { const r = await api('accounts', { action:'add', name, domain:$('#a-domain').value.trim(), notes:$('#a-notes').value.trim() }); m.className = 'small ' + (r.status === 'added' ? 'okline' : 'warntxt'); m.textContent = r.status === 'added' ? `Added ${name}.` : r.status === 'excluded' ? `${name} is on the exclude list.` : `${name} is already in the registry.`; $('#addForm').reset(); await load(); }
+  catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
+};
+function parseCSV(t){ const rows = []; let row = [], f = '', q = false; for (let i = 0; i < t.length; i++){ const ch = t[i]; if (q){ if (ch === '"'){ if (t[i+1] === '"'){ f += '"'; i++; } else q = false; } else f += ch; } else if (ch === '"') q = true; else if (ch === ','){ row.push(f); f = ''; } else if (ch === '\n' || ch === '\r'){ if (ch === '\r' && t[i+1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; } else f += ch; } if (f.length || row.length){ row.push(f); rows.push(row); } return rows.filter(r => r.some(c => c.trim())); }
+$('#fileBtn').onclick = async () => {
+  const m = $('#fileMsg'), file = $('#fileIn').files[0];
+  if (!file){ m.className = 'small errtxt'; m.textContent = 'Choose a file first.'; return; }
+  const text = await file.text(); let rows = [];
+  try {
+    if (/\.json$/i.test(file.name) || text.trim().startsWith('[') || text.trim().startsWith('{')){
+      const j = JSON.parse(text); rows = (Array.isArray(j) ? j : (j.accounts || [])).map(x => ({ ...x, name: x.name || x.Company }));
+    } else {
+      const r = parseCSV(text), h = r[0].map(x => x.trim().toLowerCase());
+      const ci = n => h.findIndex(x => n.includes(x));
+      const ix = { name: ci(['company','name','account','company_name']), domain: ci(['domain','website']), industry: ci(['industry']), notes: ci(['notes','note']), stage: ci(['stage']) };
+      if (ix.name < 0) throw new Error('The CSV needs a company column.');
+      rows = r.slice(1).map(x => ({ name: x[ix.name], domain: ix.domain >= 0 ? x[ix.domain] : '', notes: ix.notes >= 0 ? x[ix.notes] : '', stage: ix.stage >= 0 && M().ICP.stages.includes(x[ix.stage]) ? x[ix.stage] : '' }));
+    }
+  } catch(e){ m.className = 'small errtxt'; m.textContent = e.message || 'That file couldn\'t be read.'; return; }
+  m.className = 'small muted'; m.textContent = `Importing ${rows.length}…`;
+  try { const r = await api('accounts', { action:'importRows', rows }); m.className = 'small okline'; m.textContent = `${r.added} added, ${r.known} already known, ${r.excluded} excluded.`; await load(); }
+  catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
+};
+
+/* ---------- settings ---------- */
+function renderLimits(){
+  const l = S.data.settings.limits || {}, u = S.data.usage || {}, owner = S.data.role === 'owner';
+  $('#limitsBody').innerHTML = `<div class="grid3">${Object.entries(LIMIT_LABELS).map(([k, lab]) => owner
+    ? `<label class="f" for="lim-${k}">${esc(lab)} per day<input id="lim-${k}" type="number" min="0" value="${Number(l[k]) || 0}"><span class="small faint">${Number(u[k]) || 0} used today</span></label>`
+    : `<div><div class="small faint">${esc(lab)} per day</div><div style="margin-top:4px"><b style="font-weight:500">${Number(l[k]) || 0}</b> <span class="small faint">· ${Number(u[k]) || 0} used today</span></div></div>`).join('')}</div>`;
+}
+$('#limitsSave').onclick = async () => {
+  const m = $('#limitsMsg'), limits = {};
+  for (const k of Object.keys(LIMIT_LABELS)) limits[k] = Number($('#lim-' + k).value) || 0;
+  try { const r = await api('settings', { settings: { limits } }); S.data.settings = r.settings; renderLimits(); m.className = 'small okline'; m.textContent = 'Saved.'; } catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
+};
+$('#teamSave').onclick = async () => {
+  const m = $('#teamMsg'), code = $('#teamCode').value.trim();
+  try { const r = await api('settings', { teamCode: code }); S.data.teamSet = r.teamSet; $('#teamCode').value = ''; renderSettings(); m.className = 'small okline'; m.textContent = 'Saved. Share the site link and this code with the team.'; } catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
+};
+$('#teamRemove').onclick = async () => {
+  const m = $('#teamMsg');
+  try { const r = await api('settings', { teamCode: null }); S.data.teamSet = r.teamSet; renderSettings(); m.className = 'small okline'; m.textContent = 'Team access is off. The old team code no longer works.'; } catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
+};
+function renderSettings(){
+  const k = S.data.keys, s = S.data.settings, owner = S.data.role === 'owner';
+  renderLimits();
+  $('#teamState').textContent = S.data.teamSet ? 'team code set' : 'off';
+  $('#teamRemove').hidden = !S.data.teamSet;
+  $('#settingsIntro').textContent = owner
+    ? 'Your API keys are encrypted on the server and never shown again, only their last four characters. The team uses them without seeing them. Keys set as Vercel environment variables take priority.'
+    : 'The workspace owner provides the API keys and daily limits. You can change the sourcing rules, sender details and sending settings.';
+  $('#keysForm').querySelector('.panel-b:last-child').hidden = !owner;
+  $('#keysForm').querySelector('.panel-h .small').textContent = owner ? 'your accounts, your credits' : 'provided by the workspace owner';
+  if (!owner){
+    $('#keysBody').innerHTML = Object.entries(k).filter(([, v]) => !v.placeholder).map(([, v]) => `<div class="keyrow"><div><b style="font-weight:500">${esc(v.label)}</b></div><div></div><div class="row-actions">${v.set ? '<span class="chip ok">connected</span>' : '<span class="chip">not connected</span>'}</div></div>`).join('');
+  } else {
+  const help = { anthropic:'console.anthropic.com → API keys', firecrawl:'firecrawl.dev → API keys', theirstack:'app.theirstack.com → Settings → API key. Used for sourcing when set; 1 credit per job returned', apollo:'Apollo → Settings → Integrations → API (People Search needs a paid plan)', hunter:'hunter.io → API', resend:'resend.com → API keys (verify your sending domain)', smtpPass:'For Gmail: an app password from your Google account', zoominfo:'Coming later', clay:'Coming later', rocketreach:'Coming later' };
+  $('#keysBody').innerHTML = Object.entries(k).map(([id, v]) => `<div class="keyrow"><div><b style="font-weight:500">${esc(v.label)}</b>${v.placeholder ? ' <span class="chip">placeholder</span>' : ''}<br><span class="small faint">${esc(help[id] || '')}</span></div>
+    <input type="password" autocomplete="off" data-key="${id}" placeholder="${v.set ? 'Saved, ending ' + esc(v.last4) : (v.placeholder ? 'Not used yet' : 'Paste key')}" ${v.source === 'environment' || v.placeholder ? 'disabled' : ''} aria-label="${esc(v.label)} key">
+    <div class="row-actions">${v.set ? `<span class="chip ok">${v.source === 'environment' ? 'env' : 'set'}</span>${v.source === 'settings' ? `<button class="btn sm k-clear" type="button" data-key="${id}">Remove</button>` : ''}` : '<span class="chip">not set</span>'}</div></div>`).join('');
+  $('#keysBody').querySelectorAll('.k-clear').forEach(b => b.onclick = async () => { try { const r = await api('settings', { keys: { [b.dataset.key]: null } }); S.data.keys = r.keys; renderSettings(); } catch(e){} });
+  }
+  const ts = s.theirstack || {};
+  $('#ts-titles').value = (ts.titles || []).join('\n'); $('#ts-not').value = (ts.titlesNot || []).join('\n'); $('#ts-tech').value = (ts.technologySlugs || []).join('\n'); $('#ts-desc').value = (ts.descriptionPatterns || []).join('\n');
+  $('#ts-countries').value = (ts.countries || []).join(', '); $('#ts-min').value = ts.minEmployees ?? ''; $('#ts-max').value = ts.maxEmployees ?? ''; $('#ts-age').value = ts.maxAgeDays ?? 7; $('#ts-limit').value = ts.limit ?? 50;
+  $('#s-roles').value = s.roles.join('\n'); $('#s-portals').value = s.portals.join('\n'); $('#s-recency').value = s.recency || '';
+  $('#s-maxnew').value = s.maxNewCompaniesPerRun; $('#s-comp').value = s.competitorsPerAccount; $('#s-autoemail').checked = !!s.autoFindEmails; $('#s-maxemail').value = s.maxEmailLookupsPerRun; $('#s-autodraft').checked = !!s.autoDraft;
+  $('#s-exclude').value = (s.excludeExtra || []).join('\n'); $('#s-name').value = s.sender.name; $('#s-title').value = s.sender.title; $('#s-from').value = s.sender.fromEmail; $('#s-footer').value = s.sender.footer;
+  $('#s-provider').value = s.email.provider; $('#s-cap').value = s.email.dailyCap; $('#s-smtpuser').value = s.email.smtpUser; $('#s-smtphost').value = s.email.smtpHost; $('#s-smtpport').value = s.email.smtpPort;
+  $('#s-optout').value = (s.optOut || []).join('\n'); $('#s-msmart').value = s.modelSmart; $('#s-mfast').value = s.modelFast;
+}
+$('#testKeys').onclick = async () => {
+  const o = $('#testOut'), m = $('#keysMsg'); m.textContent = ''; o.innerHTML = '<span class="faint">Testing…</span>';
+  try {
+    const r = await api('test-keys', {});
+    const names = S.data.keys;
+    const store = r.storage.persistent ? `<div class="okline">Storage: ${r.storage.backend === 'redis' ? 'Redis database connected' : 'local file'}</div>` : '<div class="errtxt">Storage: no database connected. Keys saved here won\'t reach the pipeline. Add Upstash Redis in Vercel and redeploy.</div>';
+    o.innerHTML = store + (r.keysReadable ? '' : '<div class="errtxt">Saved keys can\'t be decrypted (ACCESS_CODE changed?). Paste them again.</div>') +
+      Object.entries(r.results).map(([id, x]) => `<div class="${x.ok ? 'okline' : x.ok === false ? 'errtxt' : 'faint'}">${esc(names[id]?.label || id)}: ${esc(x.message)}</div>`).join('');
+  } catch(e){ o.innerHTML = `<span class="errtxt">${esc(e.message)}</span>`; }
+};
+const lines = v => v.split('\n').map(x => x.trim()).filter(Boolean);
+$('#keysForm').onsubmit = async ev => {
+  ev.preventDefault(); const m = $('#keysMsg'), keys = {};
+  $('#keysBody').querySelectorAll('input[data-key]').forEach(i => { if (i.value.trim()) keys[i.dataset.key] = i.value.trim(); });
+  if (!Object.keys(keys).length){ m.className = 'small faint'; m.textContent = 'Paste at least one key.'; return; }
+  try { const r = await api('settings', { keys }); S.data.keys = r.keys; renderSettings(); m.className = 'small okline'; m.textContent = 'Saved and encrypted.'; } catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
+};
+$('#setForm').onsubmit = async ev => {
+  ev.preventDefault(); const m = $('#setMsg');
+  const from = $('#s-from').value.trim();
+  if (from && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(from)){ m.className = 'small errtxt'; m.textContent = 'The from email doesn\'t look right.'; return; }
+  const settings = { theirstack: { titles: lines($('#ts-titles').value), titlesNot: lines($('#ts-not').value), technologySlugs: lines($('#ts-tech').value), descriptionPatterns: lines($('#ts-desc').value), countries: $('#ts-countries').value.split(/[\s,]+/).filter(Boolean), minEmployees: $('#ts-min').value, maxEmployees: $('#ts-max').value, maxAgeDays: $('#ts-age').value, limit: $('#ts-limit').value }, roles: lines($('#s-roles').value), portals: lines($('#s-portals').value).map(x => x.replace(/^https?:\/\//, '')), recency: $('#s-recency').value, maxNewCompaniesPerRun: $('#s-maxnew').value, competitorsPerAccount: $('#s-comp').value, autoFindEmails: $('#s-autoemail').checked, maxEmailLookupsPerRun: $('#s-maxemail').value, autoDraft: $('#s-autodraft').checked, excludeExtra: lines($('#s-exclude').value), sender: { name: $('#s-name').value.trim(), title: $('#s-title').value.trim(), fromEmail: from, footer: $('#s-footer').value.trim() }, email: { provider: $('#s-provider').value, dailyCap: $('#s-cap').value, smtpUser: $('#s-smtpuser').value.trim(), smtpHost: $('#s-smtphost').value.trim(), smtpPort: $('#s-smtpport').value }, optOut: lines($('#s-optout').value), modelSmart: $('#s-msmart').value.trim() || 'claude-sonnet-5-5', modelFast: $('#s-mfast').value.trim() || 'claude-haiku-5-5' };
+  try { const r = await api('settings', { settings }); S.data.settings = r.settings; m.className = 'small okline'; m.textContent = 'Saved.'; } catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
+};
+
+(async () => { if (CODE){ try { await load(); setView('pipeline'); return; } catch(e){ if (e.error === 'setup') { showGate(e.message); return; } } } showGate(''); })();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "fragment-deal-desk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deal Desk for Fragment: an outbound agent that sources companies hiring for ledger and payments work, researches and scores them against the Fragment ICP, finds people and drafts emails. Independent work sample, not affiliated with Fragment.",
+  "scripts": {
+    "dev": "node scripts/dev-server.js",
+    "test": "node scripts/e2e-test.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "nodemailer": "6.9.16",
+    "xlsx": "0.18.5"
+  }
+}
