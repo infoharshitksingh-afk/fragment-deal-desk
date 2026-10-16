@@ -46,6 +46,8 @@ async function call(url, opts, name, tries = 3) {
       if (attempt < tries && elapsed() + wait < 230000) { await sleep(wait); continue; }
       throw new UserError(`${name} is rate limited. The run will pause and continue. (${msgStr.slice(0, 120)})`, 429, 'rate_limit');
     }
+    // Firecrawl answers 403 for a website it can't read (a blocked site), not for a bad key (that's 401).
+    if (name === 'Firecrawl' && r.status === 403) throw new UserError(`The site couldn't be read: ${msgStr.slice(0, 160)}`, 502, 'site_blocked');
     const code = r.status === 401 || r.status === 403 ? 'bad_key' : r.status === 402 ? 'limit' : 'provider_error';
     throw new UserError(`${name} returned ${r.status}: ${msgStr}`, 502, code);
   }

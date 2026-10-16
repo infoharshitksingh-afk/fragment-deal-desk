@@ -5,6 +5,7 @@ import { getKeys, getSettings } from './keys.js';
 import { claude, claudeJson, fcSearch, fcScrape, apolloPeopleSearch, apolloMatch, hunterFind, sendEmail } from './providers.js';
 import { ICP, EXCLUDE_RE, CUSTOMER_RE, CUSTOMERS, FORMATS, PERSONAS, DEFAULT_SLOTS, PROOF, slug, normDomain, docId, hostOf, today, score, roleFor, pickFormat } from './icp.js';
 import { UserError } from './auth.js';
+import { recordMention, recordDomain, getMentions } from './dataset.js';
 
 const BAD_HOSTS = /linkedin|wikipedia|facebook|twitter|x\.com|instagram|youtube|glassdoor|indeed|zoominfo|crunchbase|bloomberg|dnb\.com|rocketreach|apollo\.io|craft\.co|comparably|builtin|ziprecruiter|tsenta|lusha|owler|yahoo|reuters|sec\.gov|google\.|bing\.|mapquest|yelp|bbb\.org|greenhouse\.io|lever\.co|ashbyhq|myworkdayjobs|workday\.com|icims|smartrecruiters/i;
 const now = () => new Date().toISOString();
@@ -41,12 +42,13 @@ function isExcluded(name, settings) {
 }
 
 /** Adds a company if it isn't already known. Returns {status, id}. */
-export async function upsertCompany({ name, domain = '', source, signals = [], competitorOf = '', fields = {} }, settings) {
+export async function upsertCompany({ name, domain = '', source, signals = [], competitorOf = '', fields = {}, sourceId = '' }, settings) {
   name = String(name || '').trim(); if (!name) return { status: 'skipped' };
   const ex = await findExisting(name, domain);
   if (ex) {
     if (ex.status === 'account' && ex.accountId) {
-      const a = await getAccount(ex.accountId);
+      let a = await getAccount(ex.accountId);
+      if (a && sourceId && !(a.sourceIds || []).includes(sourceId)) a = await saveAccount(ex.accountId, { ...a, sourceIds: [...(a.sourceIds || []), sourceId] });
       if (a && signals.length) {
         const have = new Set((a.importedSignals || []).map(x => x.quote));
         const add = signals.filter(x => !have.has(x.quote));
@@ -61,7 +63,7 @@ export async function upsertCompany({ name, domain = '', source, signals = [], c
   const why = isExcluded(name, settings);
   if (why) { await register(name, { domain, status: 'excluded', reason: why, source }); return { status: 'excluded' }; }
   const id = docId(domain, name);
-  const a = { name, domain: normDomain(domain), industry: '', revenue: '', geo: '', ownership: '', careersUrl: '', newsUrl: '', stage: 'New', owner: '', notes: '', contacts: [], importedSignals: signals, source, competitorOf, createdAt: now(), ...fields };
+  const a = { name, domain: normDomain(domain), industry: '', revenue: '', geo: '', ownership: '', careersUrl: '', newsUrl: '', stage: 'New', owner: '', notes: '', contacts: [], importedSignals: signals, source, competitorOf, sourceIds: sourceId ? [sourceId] : [], createdAt: now(), ...fields };
   await saveAccount(id, a);
   await register(name, { domain: a.domain, status: 'account', accountId: id, source, competitorOf });
   return { status: 'added', id };
@@ -72,13 +74,18 @@ const BATCH = 20; // news results per Claude call
 const SIGNAL_KEYS = () => Object.entries(ICP.signals).map(([k, v]) => `${k}: ${v.label}`).join('\n');
 export async function stageSource() {
   const [keys, settings] = await Promise.all([getKeys(), getSettings()]);
-  const queries = (settings.sourceQueries || []).filter(Boolean).slice(0, 10);
-  if (!queries.length) return { remaining: 0, message: 'No sourcing searches set in Settings, so sourcing was skipped.' };
+  const all = (settings.sourceQueries || []).filter(Boolean).slice(0, 10);
+  if (!all.length || !settings.searchesPerRun) return { remaining: 0, message: 'Open searches are off in Settings; sources in the registry still run.' };
+  // Exploration: a few searches per run, rotating through the list, to find companies and new sources the registry misses.
+  const cursor = Number(await hget('meta', 'searchCursor')) || 0, n = Math.min(settings.searchesPerRun, all.length);
+  const queries = Array.from({ length: n }, (_, i) => all[(cursor + i) % all.length]);
+  await hset('meta', 'searchCursor', (cursor + n) % all.length);
   const results = [], errors = []; let firstErr = null;
   await Promise.all(queries.map(async q => {
     try {
       const r = await fcSearch(keys, q, { limit: 8, news: true, tbs: settings.recency || undefined });
       for (const x of r.news || []) results.push(`URL: ${x.url}\nTITLE: ${x.title || ''}\nDATE: ${x.date || ''}\nSNIPPET: ${x.snippet || x.description || ''}`);
+      // (domains are recorded after extraction, per company, in importLeads)
       for (const x of r.web || []) results.push(`URL: ${x.url}\nTITLE: ${x.title || ''}\nSNIPPET: ${x.description || ''}`);
     } catch (e) { firstErr ||= e; errors.push(`${q.slice(0, 40)}: ${e.message}`); }
   }));
@@ -94,12 +101,13 @@ export async function stageSource() {
     catch (e) { if (['budget', 'missing_key', 'bad_key', 'rate_limit', 'keys_unreadable'].includes(e.code)) throw e; errors.push(`batch ${i / BATCH + 1}: ${e.message}`); }
   }
   const relevant = leads.filter(l => l.relevant !== false);
-  const out = await importLeads(relevant, settings, 'News search');
+  const out = await importLeads(relevant, settings, 'News search', { exploring: true });
+  for (const l of leads.filter(l => l.relevant === false)) await recordDomain(hostOf(l.url || ''), l.company, false);
   const msg = `Ran ${queries.length} searches, ${results.length} results, ${new Set(relevant.map(l => String(l.company).trim().toLowerCase())).size} relevant companies. ${out.summary}${errors.length ? ` ${errors.length} search or batch problems skipped.` : ''}`;
   await pushLog({ stage: 'source', message: msg });
   return { remaining: 0, message: msg, ...out, warnings: errors };
 }
-async function extractLeads(keys, settings, text) {
+export async function extractLeads(keys, settings, text) {
   const prompt = `You find prospects for Fragment (fragment.dev), a ledger API that enforces double-entry correctness so money can't move unless the numbers balance, with Payments and Recon on the same records. Fragment sells to:
 - vertical AI and agentic-commerce companies whose agents run billing, payments or accounting for their customers;
 - fintechs and digital platforms with multi-directional fund flows: corporate cards and spend management, financial software (AP/AR, billing), marketplaces with payouts, cross-border payments, remittance and logistics fintech;
@@ -107,7 +115,7 @@ async function extractLeads(keys, settings, text) {
 Buyers are engineering and product teams. Today is ${today()}.
 
 From the news and web results (or pasted text) below, list the companies that are themselves doing something that fits, at most 15, strongest first. Return a JSON array and nothing else. Each item:
-{"company": "name of the company doing the thing (not the publisher)", "domain": "example.com or empty", "type": one signal key below, "quote": "verbatim from the text, at most 20 words", "date": "YYYY-MM-DD or null", "url": "source URL or empty", "why": "at most 12 words on the Fragment fit", "relevant": true or false, "vendor": true if it sells ledger, core banking or payments infrastructure to other companies, or is a bank, investor, consultancy, publisher or staffing firm}
+{"company": "name of the company doing the thing (not the publisher)", "domain": "example.com or empty", "type": one signal key below, "quote": "verbatim from the text, at most 20 words", "date": "YYYY-MM-DD or null", "url": "source URL or empty", "why": "at most 12 words on the Fragment fit", "relevant": true or false, "vendor": true only if it sells ledger, core banking or general accounting software to other companies, or is a bank, investor, consultancy, publisher or staffing firm. Startups building payments or agent-payment products on top of other infrastructure are NOT vendors}
 Signal keys:
 ${SIGNAL_KEYS()}
 Ignore job postings and hiring news. Use only what the text shows.
@@ -118,7 +126,7 @@ ${String(text).slice(0, 60000)}`;
   const list = Array.isArray(arr) ? arr : (Array.isArray(arr?.companies) ? arr.companies : []);
   return list.filter(l => l && l.company && ICP.signals[l.type]);
 }
-export async function importLeads(leads, settings, sourceLabel) {
+export async function importLeads(leads, settings, sourceLabel, { sourceId = '', exploring = false } = {}) {
   const byCo = new Map();
   for (const l of leads) { const c = String(l.company).trim(); if (!byCo.has(c)) byCo.set(c, []); byCo.get(c).push(l); }
   let added = 0, updated = 0, known = 0, excluded = 0, capped = 0;
@@ -129,10 +137,12 @@ export async function importLeads(leads, settings, sourceLabel) {
       date: /^\d{4}-\d{2}-\d{2}$/.test(l.date || '') ? l.date : today(), why: String(l.why || '').slice(0, 200)
     }));
     const domain = list.map(l => l.domain).find(Boolean) || '';
+    for (const l of list) await recordMention(company, { sourceId, source: sourceLabel, url: l.url || '', date: sigs[0].date, quote: String(l.quote || '').slice(0, 200), type: l.type });
     if (list.some(l => l.vendor)) { await register(company, { status: 'excluded', reason: 'Infrastructure vendor, bank, investor, consultancy or publisher', source: sourceLabel }); excluded++; excludedNames.push(company); continue; }
     const ex = await findExisting(company, domain);
     if (!ex && added >= settings.maxNewCompaniesPerRun) { capped++; continue; }
-    const r = await upsertCompany({ name: company, domain, source: sourceLabel, signals: sigs }, settings);
+    const r = await upsertCompany({ name: company, domain, source: sourceLabel, signals: sigs, sourceId }, settings);
+    if (exploring) for (const l of list) await recordDomain(hostOf(l.url || ''), company, r.status !== 'excluded' && !r.status.startsWith('known-'));
     if (r.status === 'added') { added++; addedNames.push(company); }
     else if (r.status === 'updated') updated++;
     else if (r.status === 'excluded') { excluded++; excludedNames.push(company); }
@@ -187,13 +197,16 @@ export async function researchAccount(id) {
   }
   const sources = []; let n = 0;
   const add = (kind, url, title, text, date) => { if (url && text) sources.push({ id: 'S' + (++n), kind, url, title: String(title || '').slice(0, 160), date: date || null, text: String(text).slice(0, kind === 'page' ? 12000 : 900) }); };
+  const mentions = await getMentions(a.name);
+  if (mentions.length) notes.push(mentions.length + ' dataset mentions');
   const tasks = [
     fcSearch(keys, `"${a.name}" (launches OR raises OR "Series" OR wallet OR payouts OR card OR CTO OR "VP Engineering")`, { limit: 8, news: true, tbs: 'qdr:y' }).then(r => { for (const x of r.news) add('news', x.url, x.title, `${x.title || ''}. ${x.snippet || x.description || ''}`, x.date); for (const x of r.web) add('web', x.url, x.title, `${x.title || ''}. ${x.description || ''}`); }),
-    fcSearch(keys, `"${a.name}" ("AI agent" OR agents OR billing OR payouts OR ledger OR reconciliation OR "money movement")`, { limit: 6 }).then(r => { for (const x of r.web) add('web', x.url, x.title, `${x.title || ''}. ${x.description || ''}`); })
+    mentions.length >= 3 ? Promise.resolve() : fcSearch(keys, `"${a.name}" ("AI agent" OR agents OR billing OR payouts OR ledger OR reconciliation OR "money movement")`, { limit: 6 }).then(r => { for (const x of r.web) add('web', x.url, x.title, `${x.title || ''}. ${x.description || ''}`); })
   ];
   if (a.domain) tasks.push(fcScrape(keys, 'https://' + a.domain).then(t => add('page', 'https://' + a.domain, 'Company website', t)));
   if (a.newsUrl) tasks.push(fcScrape(keys, a.newsUrl).then(t => add('page', a.newsUrl, 'Newsroom', t)));
   const settled = await Promise.allSettled(tasks);
+  for (const m of mentions.slice(0, 8)) add('dataset', m.url || '', `${m.source}${m.type ? ' · ' + m.type : ''}`, `${m.source}: ${m.quote}`, m.date);
   const failed = settled.filter(s => s.status === 'rejected');
   if (!sources.length) {
     if (failed.length) throw failed[0].reason;

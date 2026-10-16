@@ -1,5 +1,5 @@
 // End-to-end test with mocked outside APIs: settings, sourcing, dedupe, research, competitors, people, emails, drafts, send, export.
-process.env.ACCESS_CODE = 'test-code'; process.env.DD_STORE_FILE = '/tmp/dd-e2e.json'; process.env.FIRECRAWL_GAP_MS = '0'; process.env.DD_SKIP_SEED = '1';
+process.env.ACCESS_CODE = 'test-code'; process.env.DD_STORE_FILE = '/tmp/dd-e2e.json'; process.env.FIRECRAWL_GAP_MS = '0'; process.env.DD_SKIP_SEED = '1'; process.env.DD_SKIP_SOURCE_SEED = '1';
 import fs from 'node:fs';
 try { fs.unlinkSync('/tmp/dd-e2e.json'); } catch {}
 await import('./mocks.js');
@@ -15,14 +15,14 @@ ok(!fs.readFileSync('/tmp/dd-e2e.json', 'utf8').includes('sk-test'), 'raw keys n
 
 const log = [];
 let used = 0;
-for (const stage of ['source', 'research', 'competitors', 'research', 'people', 'emails', 'drafts']) {
+for (const stage of ['crawl', 'source', 'research', 'competitors', 'research', 'people', 'emails', 'drafts']) {
   for (let i = 0; i < 20; i++) { const x = await api('run', { stage, used }); if (x.status !== 200) { log.push(stage + ' ERROR ' + x.body.message); break; } if (x.body.used != null) used = x.body.used; log.push(stage + ': ' + x.body.message); if (!x.body.remaining) break; }
 }
 console.log(log.join('\n'));
 let st = (await api('state')).body;
 const names = st.accounts.map(a => a.name).sort();
 ok(names.includes('Kestrel Marketplace') && names.includes('Northpeak Wallet'), 'sourced companies added as accounts');
-ok(/Ran 7 searches/.test(log[0]), 'every default sourcing search ran (no job or hiring sources)');
+ok(/No sources are due/.test(log[0]) && /Ran 2 searches/.test(log[1]), 'empty registry is skipped; exploration runs 2 searches per run');
 ok(!names.includes('Accenture'), 'vendor excluded');
 let st2 = (await api('state')).body;
 ok(!st2.accounts.some(a => a.name === 'Ramp') && st2.registry.some(x => x.name === 'Ramp' && /customer/i.test(x.reason || '')), 'existing Fragment customers are excluded, with the reason recorded');
@@ -69,7 +69,45 @@ const ex = await fetch(`http://localhost:${port}/api/export?code=test-code`);
 const buf = Buffer.from(await ex.arrayBuffer());
 ok(ex.status === 200 && buf.slice(0, 2).toString() === 'PK', 'Excel export downloads (' + buf.length + ' bytes)');
 const XLSX = (await import('xlsx')).default; const wb = XLSX.read(buf);
-ok(['Accounts', 'Contacts', 'Signals', 'Drafts', 'Company registry'].every(n => wb.SheetNames.includes(n)), 'workbook has all five sheets');
+ok(['Accounts', 'Contacts', 'Signals', 'Drafts', 'Company registry', 'Sources'].every(n => wb.SheetNames.includes(n)), 'workbook has all six sheets, including Sources');
+
+// ---- source registry, yield weights and the company dataset ----
+let sr = await api('sources', { action: 'add', source: { name: 'Source A', url: 'https://sources.example/a', type: 'Newsletter', cadenceDays: 7, prior: 0.4 } });
+const A = sr.body.result.id;
+sr = await api('sources', { action: 'add', source: { name: 'Source B', url: 'https://sources.example/b', type: 'News', cadenceDays: 7, prior: 0.4 } });
+const B = sr.body.result.id;
+ok((await api('sources', { action: 'add', source: { name: 'dup', url: 'https://sources.example/a' } })).status === 400, 'the same URL cannot be added twice');
+let cr = await api('run', { stage: 'crawl', crawled: 0 });
+let cr2 = await api('run', { stage: 'crawl', crawled: cr.body.crawled });
+ok(cr.status === 200 && cr2.status === 200 && cr2.body.crawled === 2, 'crawl stage reads due sources one per call and counts them');
+st = (await api('state')).body;
+const orbit = st.accounts.find(a => a.name === 'Orbit Agents'), kes2 = st.accounts.find(a => a.name === 'Kestrel Marketplace');
+ok(orbit && orbit.sourceIds.includes(A) && kes2.sourceIds.includes(A), 'new and known companies are attributed to the source that found them');
+ok(st.sources.find(x => x.id === A).status === 'Working' && st.sources.every(x => !x.due), 'checked sources are marked working and not due again');
+const usage1 = Number(st.usage.anthropic);
+cr = await api('sources', { action: 'crawl', id: A });
+ok(/nothing new/.test(cr.body.result.message) && Number((await api('state')).body.usage.anthropic) === usage1, 'an unchanged page costs no Claude call');
+globalThis.__srcV = 2;
+cr = await api('sources', { action: 'crawl', id: A });
+st = (await api('state')).body;
+ok(/1 new lines/.test(cr.body.result.message) && st.accounts.some(a => a.name === 'Pylon Billing'), 'only new lines are read, and they add the new company');
+await api('run', { stage: 'research', used: 0 }); for (let k = 0; k < 5; k++) await api('run', { stage: 'research', used: 0 });
+st = (await api('state')).body;
+const sA = st.sources.find(x => x.id === A), sB = st.sources.find(x => x.id === B);
+ok(sA.tier1 >= 1 && sA.weight > sB.weight && sB.weight === 0.4, `source with Tier 1 accounts outweighs an empty one (${sA.weight} vs ${sB.weight})`);
+const orbitR = st.accounts.find(a => a.name === 'Orbit Agents');
+ok((orbitR.research?.sources || []).some(x => x.kind === 'dataset'), 'research reads dataset mentions first');
+await api('sources', { action: 'add', source: { name: 'Broken', url: 'https://sources.example/broken' } });
+const brk = (await api('state')).body.sources.find(x => x.name === 'Broken').id;
+for (let k = 0; k < 3; k++) await api('sources', { action: 'crawl', id: brk });
+ok((await api('state')).body.sources.find(x => x.id === brk).status === 'Paused', 'a source that fails three times is paused');
+await api('settings', { settings: { suggestDomainAfter: 2 } });
+st = (await api('state')).body;
+ok(st.suggestions.some(d => d.domain === 'news.example.com' && d.fit >= 2), 'domains that keep producing fitting companies are suggested as sources');
+sr = await api('sources', { action: 'addSuggested', domain: 'news.example.com' });
+ok(sr.status === 200 && !sr.body.suggestions.some(d => d.domain === 'news.example.com'), 'adding a suggestion registers it and removes it from suggestions');
+await api('sources', { action: 'update', id: B, patch: { enabled: false } });
+ok((await api('state')).body.sources.find(x => x.id === B).enabled === false, 'a source can be paused by hand');
 
 // ---- team access, limits, starting data ----
 r = await api('settings', { teamCode: 'team-pass-123' });

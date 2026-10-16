@@ -17,15 +17,29 @@ globalThis.fetch = async (url, opts = {}) => {
       { url: 'https://news.example.com/ramp', title: 'Ramp expands agents', snippet: 'Ramp launched new agents', date: '2026-10-01' } ] } });
     return json({ success: true, data: { web: [{ url: 'https://news.example.com/a', title: 'Company names new CTO', description: 'Named new CTO in September' }], news: [{ url: 'https://news.example.com/b', title: 'New CTO appointed', snippet: 'appointed a new CTO', date: '2026-09-20' }] } });
   }
-  if (u.includes('api.firecrawl.dev/v2/scrape')) return json({ success: true, data: { markdown: 'We pay out to sellers instantly. Our ledger service is being rebuilt as payouts grow.' } });
+  if (u.includes('api.firecrawl.dev/v2/scrape')) {
+    globalThis.__scrapes = (globalThis.__scrapes || 0) + 1;
+    if (String(body.url).includes('sources.example/a')) return json({ success: true, data: { markdown: [
+      'Orbit Agents launches AI agents that reconcile and pay vendor invoices for mid-market companies',
+      'Kestrel Marketplace adds instant payouts in Canada for its marketplace sellers this week',
+      ...(globalThis.__srcV >= 2 ? ['Pylon Billing launches usage-based billing for AI products with prepaid credits'] : [])].join('\n') } });
+    if (String(body.url).includes('sources.example/broken')) return json({ success: false, error: 'Blocked by the site' }, 403);
+    if (String(body.url).includes('sources.example/b')) return json({ success: true, data: { markdown: 'Nothing to see here on this page today. About us, contact and careers links only.' } });
+    return json({ success: true, data: { markdown: 'We pay out to sellers instantly. Our ledger service is being rebuilt as payouts grow.' } });
+  }
   if (u.includes('api.anthropic.com')) {
     const p = body.messages[0].content;
     let out;
-    if (p.startsWith('You find prospects') && p.includes('Bluewater Payroll launches')) out = [{ company: 'Bluewater Payroll', type: 'money_launch', quote: 'Bluewater Payroll launches earned wage access wallets', date: '2026-10-10', relevant: true, vendor: false }, { company: 'Sequoia Capital', type: 'funding', quote: 'Sequoia closes new fund', relevant: false }];
+    if (p.startsWith('You find prospects') && p.includes('Orbit Agents')) out = [
+      { company: 'Orbit Agents', domain: 'orbit.example', type: 'agent_launch', quote: 'launches AI agents that reconcile and pay vendor invoices', date: '2026-10-12', relevant: true, vendor: false },
+      { company: 'Kestrel Marketplace', type: 'expansion', quote: 'adds instant payouts in Canada', date: '2026-10-12', relevant: true, vendor: false }];
+    else if (p.startsWith('You find prospects') && p.includes('Pylon Billing')) out = [{ company: 'Pylon Billing', type: 'money_launch', quote: 'launches usage-based billing for AI products', date: '2026-10-14', relevant: true, vendor: false }];
+    else if (p.startsWith('You find prospects') && p.includes('Nothing to see here')) out = [];
+    else if (p.startsWith('You find prospects') && p.includes('Bluewater Payroll launches')) out = [{ company: 'Bluewater Payroll', type: 'money_launch', quote: 'Bluewater Payroll launches earned wage access wallets', date: '2026-10-10', relevant: true, vendor: false }, { company: 'Sequoia Capital', type: 'funding', quote: 'Sequoia closes new fund', relevant: false }];
     else if (p.startsWith('You find prospects') && p.includes('closes new fund')) out = [{ company: 'Sequoia Capital', type: 'funding', quote: 'Sequoia closes new fund', date: '2026-10-01', relevant: false, vendor: true }];
     else if (p.startsWith('You find prospects')) out = [
       { company: 'Kestrel Marketplace', domain: 'kestrel.example', type: 'money_launch', quote: 'launched instant payouts for 40,000 sellers', date: '2026-10-08', url: 'https://news.example.com/kestrel', relevant: true, vendor: false },
-      { company: 'Northpeak Wallet', type: 'agent_launch', quote: 'launched agents that pay vendors on behalf of customers', date: '2026-10-05', relevant: true, vendor: false },
+      { company: 'Northpeak Wallet', type: 'agent_launch', quote: 'launched agents that pay vendors on behalf of customers', date: '2026-10-05', url: 'https://news.example.com/northpeak', relevant: true, vendor: false },
       { company: 'Accenture', type: 'funding', quote: 'consulting', relevant: true, vendor: true },
       { company: 'Ramp', domain: 'ramp.com', type: 'agent_launch', quote: 'launched new agents', relevant: true, vendor: false }];
     else if (p.startsWith('You research')) out = { summary: 'Marketplace paying out to independent sellers.', segment: p.includes('Wallet') ? 'spend' : 'market', revenue: 'ab', hq: 'us', money: 'multi', stack: { landscape: 'homegrown_strain', evidence: 'Our ledger service is being rebuilt as payouts grow.', source: 'S1' }, signals: [{ type: 'new_leader', quote: 'appointed a new CTO', source: 'S1', date: '2026-09-20', why: 'new leader' }], disqualifiers: [], outreach_angle: 'payouts ledger rebuild' };

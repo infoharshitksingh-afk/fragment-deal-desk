@@ -28,6 +28,10 @@ export const DEFAULT_SETTINGS = {
     'launches "usage-based billing" OR "automated billing" B2B'
   ],
   recency: 'qdr:m',
+  // Source registry crawl and open-search exploration per run.
+  sourcesPerRun: 4,
+  searchesPerRun: 2,
+  suggestDomainAfter: 3,
   maxNewCompaniesPerRun: 15,
   competitorsPerAccount: 3,
   autoFindEmails: false,
@@ -101,6 +105,9 @@ export async function saveSettings(patch) {
   if (!['', 'qdr:d', 'qdr:w', 'qdr:m', 'qdr:y'].includes(next.recency)) next.recency = cur.recency;
   for (const k of ['optOut', 'excludeExtra']) if (!Array.isArray(next[k])) next[k] = cur[k];
   for (const k of ['maxNewCompaniesPerRun', 'competitorsPerAccount', 'maxEmailLookupsPerRun']) next[k] = Math.max(0, Math.min(100, Number(next[k]) || 0));
+  next.sourcesPerRun = Math.max(0, Math.min(30, Math.round(Number(next.sourcesPerRun) || 0)));
+  next.searchesPerRun = Math.max(0, Math.min(10, Math.round(Number(next.searchesPerRun) || 0)));
+  next.suggestDomainAfter = Math.max(1, Math.min(50, Math.round(Number(next.suggestDomainAfter) || 3)));
   next.email.dailyCap = Math.max(1, Math.min(500, Number(next.email.dailyCap) || 25));
   await set('settings', next);
   return next;

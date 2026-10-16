@@ -104,7 +104,7 @@ tr:last-child td{border-bottom:0}
 .draft textarea{min-height:180px;font-size:13.5px}
 .row-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .note{font-size:12px;color:var(--muted)} .warntxt{font-size:12px;color:var(--amber)} .errtxt{font-size:12.5px;color:var(--red)} .okline{font-size:12.5px;color:var(--green)}
-.stages{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--line);border-radius:8px}
+.stages{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:8px}
 .stage{padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .stage+.stage{border-left:1px solid var(--line)}
 .stage h3{font-size:18px}
@@ -128,6 +128,10 @@ tr:last-child td{border-bottom:0}
 .fmt{border:1px solid var(--line);border-radius:6px;padding:12px;background:var(--bg);display:flex;flex-direction:column;gap:6px}
 .fmt pre{margin:0;white-space:pre-wrap;font-family:var(--sans);font-size:13px;color:var(--muted);line-height:1.55}
 .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--faint);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.wbar{display:flex;align-items:center;gap:8px}.wbar .bar{width:70px}
+.srcname{font-weight:500}
+.srcurl{font-family:var(--mono);font-size:11px;color:var(--muted);word-break:break-all}
+.inl{width:64px;padding:4px 6px;font-size:12.5px}
 .thm{background:none;border:1px solid var(--line-2);border-radius:5px;padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--muted);cursor:pointer}
 </style>
 </head>
@@ -140,6 +144,7 @@ tr:last-child td{border-bottom:0}
   </div>
   <div class="tabs" role="tablist" id="tabs" hidden>
     <button class="tab" role="tab" data-view="pipeline" aria-selected="true">Run</button>
+    <button class="tab" role="tab" data-view="sources" aria-selected="false">Sources</button>
     <button class="tab" role="tab" data-view="accounts" aria-selected="false">Accounts</button>
     <button class="tab" role="tab" data-view="people" aria-selected="false">People</button>
     <button class="tab" role="tab" data-view="icp" aria-selected="false">ICP</button>
@@ -178,6 +183,24 @@ tr:last-child td{border-bottom:0}
     <div class="panel"><div class="panel-h"><h3>This run</h3><span class="small faint" id="runCount"></span></div><div class="panel-b"><div class="log" id="runLog"><span class="faint">Press Run to start. Each step shows here as it finishes.</span></div></div></div>
     <div class="panel"><div class="panel-h"><h3>History</h3><button class="btn sm" type="button" id="refreshLog">Refresh</button></div><div class="panel-b"><div class="log" id="histLog"></div></div></div>
   </div>
+</section>
+
+<section id="view-sources" hidden>
+  <div class="head">
+    <div><div class="eyebrow">Where companies come from</div><h1 style="margin-top:10px">Sources</h1></div>
+    <p class="muted">The pages Deal Desk reads every few days instead of searching at random. Each source earns a weight from what it produces: accounts kept, Tier 1, contacted and replied, pulled toward a starting guess until it has a record. Higher weight means it is checked more often and first. Only content that is new since the last check goes to Claude.</p>
+  </div>
+  <div class="split even" style="margin-bottom:16px">
+    <form class="panel" id="srcForm" novalidate><div class="panel-h"><h3>Add a source</h3></div><div class="panel-b">
+      <div class="grid2"><label class="f" for="src-name">Name<input id="src-name" placeholder="e.g. Fintech newsletter archive"></label><label class="f" for="src-url">URL of the page that lists stories or companies<input id="src-url" placeholder="https://"></label></div>
+      <div class="grid3"><label class="f" for="src-type">Type<select id="src-type"></select></label><label class="f" for="src-cad">Check every (days)<input id="src-cad" type="number" min="1" max="90" value="7"></label><label class="f" for="src-prior">Starting weight (0 to 1)<input id="src-prior" type="number" min="0" max="1" step="0.05" value="0.45"></label></div>
+      <label class="chk" for="src-warm"><input type="checkbox" id="src-warm"> Warm path (Fragment investor or partner portfolio)</label>
+      <div class="row-actions"><button class="btn primary" type="submit">Add source</button><span class="small" id="srcMsg"></span></div>
+    </div></form>
+    <div class="panel"><div class="panel-h"><h3>Suggested sources</h3><span class="small faint">from open searches</span></div><div class="panel-b" id="srcSuggest"></div></div>
+  </div>
+  <div class="list tablewrap" id="srcTable"></div>
+  <p class="note" style="margin-top:10px">Weight = (Tier 1 + half of contacted + 2 × replied + a little for every account kept + 4 × starting weight) ÷ (accounts kept + 4), × 1.15 for warm paths. A source with no record sits at its starting weight. Three failed reads in a row pause a source.</p>
 </section>
 
 <section id="view-accounts" hidden>
@@ -281,12 +304,17 @@ tr:last-child td{border-bottom:0}
       </div></div>
     </div>
     <form class="panel" id="setForm"><div class="panel-h"><h3>Rules</h3></div><div class="panel-b">
-      <div class="note" style="margin-bottom:10px"><b style="font-weight:500">Sourcing searches</b> — each run searches news and the web for these, then Claude keeps companies that fit the ICP. Hiring is not used as a signal.</div>
-      <label class="f" for="s-queries">Searches (one per line, up to 10)<textarea id="s-queries" rows="8"></textarea></label>
+      <div class="note" style="margin-bottom:10px"><b style="font-weight:500">Exploration</b> — the Sources tab does most of the sourcing. These open searches run a few at a time to catch what the registry misses and to suggest new sources. Hiring is not used as a signal.</div>
+      <label class="f" for="s-queries">Open searches (one per line, up to 10; a few run each time, in rotation)<textarea id="s-queries" rows="8"></textarea></label>
       <div class="grid3">
         <label class="f" for="s-recency">News age<select id="s-recency"><option value="qdr:d">Last day</option><option value="qdr:w">Last week</option><option value="qdr:m">Last month</option><option value="qdr:y">Last year</option><option value="">Any time</option></select></label>
         <label class="f" for="s-maxnew">New companies per run<input id="s-maxnew" type="number" min="0" max="100"></label>
         <label class="f" for="s-comp">Competitors per account<input id="s-comp" type="number" min="0" max="10"></label>
+      </div>
+      <div class="grid3">
+        <label class="f" for="s-srcrun">Sources checked per run<input id="s-srcrun" type="number" min="0" max="30"></label>
+        <label class="f" for="s-searchrun">Open searches per run<input id="s-searchrun" type="number" min="0" max="10"></label>
+        <label class="f" for="s-suggest">Suggest a domain after N fitting companies<input id="s-suggest" type="number" min="1" max="50"></label>
       </div>
       <div class="grid2">
         <label class="chk" for="s-autoemail"><input type="checkbox" id="s-autoemail"> Find emails automatically (uses Apollo or Hunter credits)</label>
@@ -328,14 +356,15 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const S = { data:null, sel:null, view:'pipeline', run:null, busy:{}, msgs:{}, confirmDel:null };
 const STAGE_INFO = [
-  ['source','Source','Agent launches, money products and funding rounds from news search'],
+  ['crawl','Sources','Registry pages by weight; only new content is read'],
+  ['source','Explore','A few open news searches to find what the registry misses'],
   ['research','Research','Product, money flows, ledger stack, launches, funding, score'],
   ['competitors','Peers','Same-stage peers of strong-fit accounts'],
   ['people','People','Payments lead, CTO and finance lead for Tier 1'],
   ['emails','Emails','Look up work emails (Apollo, Hunter)'],
   ['drafts','Drafts','First email from the matching format']
 ];
-const ORDER = ['source','research','competitors','research','people','emails','drafts'];
+const ORDER = ['crawl','source','research','competitors','research','people','emails','drafts'];
 
 let CODE = ''; try { CODE = localStorage.getItem('dd-code') || ''; } catch(e){}
 async function api(path, body){
@@ -378,6 +407,7 @@ function render(){
   if (S.view === 'accounts'){ renderList(); renderDetail(); }
   if (S.view === 'people') renderPeople();
   if (S.view === 'registry') renderRegistry();
+  if (S.view === 'sources') renderSources();
   if (S.view === 'icp') renderIcp();
   if (S.view === 'settings') renderSettings();
 }
@@ -416,6 +446,43 @@ function renderIcp(){
   apply();
 })();
 
+/* ---------- sources ---------- */
+function renderSources(){
+  const list = S.data.sources || [], types = S.data.sourceTypes || [];
+  if (!$('#src-type').options.length) $('#src-type').innerHTML = types.map(t => `<option>${esc(t)}</option>`).join('');
+  const maxW = Math.max(1, ...list.map(x => x.weight));
+  const chip = x => x.status === 'Paused' ? '<span class="chip red">Paused</span>' : !x.enabled ? '<span class="chip">Off</span>' : x.status === 'Working' ? '<span class="chip ok">Working</span>' : x.status === 'Checked' ? '<span class="chip t2">Checked</span>' : '<span class="chip warn">Unverified</span>';
+  $('#srcTable').innerHTML = list.length ? `<table><thead><tr><th>Source</th><th>Type</th><th>Status</th><th>Weight</th><th class="num">Kept</th><th class="num">Tier 1</th><th class="num">Contacted</th><th class="num">Replied</th><th>Every (days)</th><th>Start weight</th><th>Last checked</th><th></th></tr></thead><tbody>${list.map(x => `<tr data-id="${esc(x.id)}">
+    <td style="min-width:220px"><span class="srcname">${esc(x.name)}</span>${x.warm ? ' <span class="chip t1">warm</span>' : ''}<br><a class="srcurl" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.url)}</a>${x.notes ? `<div class="small faint">${esc(x.notes)}</div>` : ''}${x.lastError ? `<div class="small errtxt">${esc(x.lastError)}</div>` : ''}</td>
+    <td class="small">${esc(x.type)}</td><td>${chip(x)}${x.due ? '<div class="small faint">due</div>' : ''}</td>
+    <td><div class="wbar"><div class="bar"><i style="width:${Math.round(100 * x.weight / maxW)}%"></i></div><span class="mono small">${x.weight.toFixed(2)}</span></div></td>
+    <td class="num">${x.kept}</td><td class="num">${x.tier1}</td><td class="num">${x.contacted}</td><td class="num">${x.replied}</td>
+    <td><input class="inl s-cad" type="number" min="1" max="90" value="${x.cadenceDays}" aria-label="Check every N days"></td>
+    <td><input class="inl s-prior" type="number" min="0" max="1" step="0.05" value="${x.prior}" aria-label="Starting weight"></td>
+    <td class="small">${x.lastCrawl ? esc(fmtTime(x.lastCrawl)) + `<div class="faint">${x.stats?.newLines ?? 0} new lines · ${x.stats?.found ?? 0} found</div>` : '<span class="faint">never</span>'}</td>
+    <td><div class="row-actions" style="flex-wrap:nowrap"><button class="btn sm s-crawl" type="button" ${S.busy['crawl' + x.id] ? 'disabled' : ''}>${S.busy['crawl' + x.id] ? 'Reading…' : 'Check now'}</button><button class="btn sm s-toggle" type="button">${x.enabled && x.status !== 'Paused' ? 'Pause' : 'Resume'}</button>${S.confirmDel === x.id ? '<button class="btn sm danger s-del-yes" type="button">Remove?</button>' : '<button class="btn sm s-del" type="button" aria-label="Remove source">✕</button>'}</div>${S.msgs['src' + x.id] ? `<div class="small ${S.msgs['src' + x.id].ok ? 'okline' : 'errtxt'}">${esc(S.msgs['src' + x.id].text)}</div>` : ''}</td>
+  </tr>`).join('')}</tbody></table>` : '<div class="empty"><p class="muted">No sources yet. Add one above.</p></div>';
+  const sug = S.data.suggestions || [];
+  $('#srcSuggest').innerHTML = sug.length ? sug.map(d => `<div class="row-actions" style="justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:8px"><div><b style="font-weight:500">${esc(d.domain)}</b><div class="small muted">${d.fit} fitting companies, e.g. ${esc(d.examples.join(', '))}</div></div><button class="btn sm s-add-sug" type="button" data-domain="${esc(d.domain)}">Add as source</button></div>`).join('') : '<p class="small muted">None yet. When an open search keeps finding fitting companies on a site that isn\'t registered, it shows up here.</p>';
+  const call = async (body, key) => { try { const r = await api('sources', body); S.data.sources = r.sources; S.data.suggestions = r.suggestions; if (key) S.msgs[key] = { ok: true, text: r.result?.message || 'Saved.' }; } catch(e){ if (key) S.msgs[key] = { ok: false, text: e.message }; } renderSources(); };
+  $('#srcTable').querySelectorAll('tr[data-id]').forEach(tr => {
+    const id = tr.dataset.id, x = list.find(y => y.id === id);
+    tr.querySelector('.s-crawl').onclick = async () => { S.busy['crawl' + id] = true; renderSources(); await call({ action:'crawl', id }, 'src' + id); S.busy['crawl' + id] = false; await load().catch(() => {}); };
+    tr.querySelector('.s-toggle').onclick = () => call({ action:'update', id, patch:{ enabled: !(x.enabled && x.status !== 'Paused') } });
+    tr.querySelector('.s-cad').onchange = e => call({ action:'update', id, patch:{ cadenceDays: e.target.value } });
+    tr.querySelector('.s-prior').onchange = e => call({ action:'update', id, patch:{ prior: e.target.value } });
+    const d = tr.querySelector('.s-del'); if (d) d.onclick = () => { S.confirmDel = id; renderSources(); };
+    const dy = tr.querySelector('.s-del-yes'); if (dy) dy.onclick = () => { S.confirmDel = null; call({ action:'remove', id }); };
+  });
+  $('#srcSuggest').querySelectorAll('.s-add-sug').forEach(b => b.onclick = () => call({ action:'addSuggested', domain: b.dataset.domain }));
+}
+$('#srcForm').onsubmit = async ev => {
+  ev.preventDefault(); const m = $('#srcMsg');
+  try { const r = await api('sources', { action:'add', source:{ name:$('#src-name').value, url:$('#src-url').value, type:$('#src-type').value, cadenceDays:$('#src-cad').value, prior:$('#src-prior').value, warm:$('#src-warm').checked } });
+    S.data.sources = r.sources; S.data.suggestions = r.suggestions; m.className = 'small okline'; m.textContent = 'Added. It will be checked on the next run, or press Check now.'; $('#src-name').value = ''; $('#src-url').value = ''; renderSources(); }
+  catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
+};
+
 /* ---------- pipeline ---------- */
 function renderPipeline(){
   const k = S.data.keys, s = S.data.settings;
@@ -439,6 +506,7 @@ function renderPipeline(){
 function stageCounts(){
   const a = S.data.accounts;
   return {
+    crawl: (S.data.sources || []).filter(x => x.due).length,
     research: a.filter(x => !x.research && !['Open deal','Customer','Opted out'].includes(x.stage)).length,
     competitors: a.filter(x => !x.competitorOf && !x.competitorsDone && x.research && x.score.fit >= 35).length,
     people: a.filter(x => !x.peopleDone && x.research && x.score.tier === '1').length,
@@ -455,17 +523,18 @@ function renderHist(){ $('#histLog').innerHTML = (S.data.log || []).map(l => `<s
 function logLine(text, cls){ const el = $('#runLog'); if (S.run && S.run.lines === 0) el.innerHTML = ''; const span = document.createElement('span'); span.className = cls || ''; span.textContent = text; el.prepend(span); if (S.run) S.run.lines++; $('#runCount').textContent = S.run ? `${S.run.lines} steps` : ''; }
 async function runPipeline(skipSource){
   if (S.run) return;
-  S.run = { lines: 0, done: new Set(), current: null, stop: false, used: 0 };
+  S.run = { lines: 0, done: new Set(), current: null, stop: false, used: 0, crawled: 0 };
   $('#runMsg').textContent = ''; renderPipeline();
-  const order = skipSource ? ORDER.filter(x => x !== 'source') : ORDER;
+  const order = skipSource ? ORDER.filter(x => x !== 'source' && x !== 'crawl') : ORDER;
   let errors = 0;
   outer: for (const stage of order){
     S.run.current = stage; renderPipeline();
     for (let i = 0; i < 200; i++){
       if (S.run.stop) break outer;
       try {
-        const r = await api('run', { stage, used: S.run.used });
+        const r = await api('run', { stage, used: S.run.used, crawled: S.run.crawled });
         if (r.used != null) S.run.used = r.used;
+        if (r.crawled != null) S.run.crawled = r.crawled;
         logLine(`${stage}: ${r.message}`, 'k');
         (r.warnings || []).forEach(w => logLine(`${stage}: ${w}`, 'e'));
         if (!r.remaining) break;
@@ -533,7 +602,7 @@ function renderDetail(){
   const ICP = M().ICP;
   el.innerHTML = `
   <div class="panel"><div class="panel-h"><div style="min-width:0"><h2>${esc(a.name)}</h2>
-    <p class="small muted">${a.domain ? `<a href="https://${esc(a.domain)}" target="_blank" rel="noopener">${esc(a.domain)}</a>` : 'website not found yet'}${a.source ? ' · ' + esc(a.source) : ''}${r ? ' · researched ' + esc(fmtDate(r.researchedAt)) : ''}</p></div>
+    <p class="small muted">${a.domain ? `<a href="https://${esc(a.domain)}" target="_blank" rel="noopener">${esc(a.domain)}</a>` : 'website not found yet'}${a.source ? ' · ' + esc(a.source) : ''}${(a.sourceIds || []).length ? ' · found via ' + esc(a.sourceIds.map(id => (S.data.sources || []).find(x => x.id === id)?.name).filter(Boolean).join(', ')) : ''}${r ? ' · researched ' + esc(fmtDate(r.researchedAt)) : ''}</p></div>
     <div class="row-actions">${tierChip(a.score.tier)}<button class="btn primary" type="button" id="doResearch" ${S.busy.research ? 'disabled' : ''}>${S.busy.research ? 'Researching…' : (r ? 'Research again' : 'Research')}</button></div></div>
     <div class="panel-b">${msgHtml('research')}
       <div class="scores"><div class="score"><span>Fit</span><b>${a.score.fit}<span style="font-size:14px"> / 50</span></b></div><div class="score"><span>Timing</span><b>${a.score.tier ? Math.round(a.score.timing) : '–'}<span style="font-size:14px"> / 50</span></b></div><div class="score"><span>CRM stage</span><b style="font-size:20px;padding-top:6px">${esc(a.stage)}</b></div></div>
@@ -750,6 +819,7 @@ function renderSettings(){
   $('#keysBody').querySelectorAll('.k-clear').forEach(b => b.onclick = async () => { try { const r = await api('settings', { keys: { [b.dataset.key]: null } }); S.data.keys = r.keys; renderSettings(); } catch(e){} });
   }
   $('#s-queries').value = (s.sourceQueries || []).join('\n'); $('#s-recency').value = s.recency || '';
+  $('#s-srcrun').value = s.sourcesPerRun ?? 4; $('#s-searchrun').value = s.searchesPerRun ?? 2; $('#s-suggest').value = s.suggestDomainAfter ?? 3;
   $('#s-maxnew').value = s.maxNewCompaniesPerRun; $('#s-comp').value = s.competitorsPerAccount; $('#s-autoemail').checked = !!s.autoFindEmails; $('#s-maxemail').value = s.maxEmailLookupsPerRun; $('#s-autodraft').checked = !!s.autoDraft;
   $('#s-exclude').value = (s.excludeExtra || []).join('\n'); $('#s-name').value = s.sender.name; $('#s-title').value = s.sender.title; $('#s-from').value = s.sender.fromEmail; $('#s-footer').value = s.sender.footer;
   $('#s-provider').value = s.email.provider; $('#s-cap').value = s.email.dailyCap; $('#s-smtpuser').value = s.email.smtpUser; $('#s-smtphost').value = s.email.smtpHost; $('#s-smtpport').value = s.email.smtpPort;
@@ -776,7 +846,7 @@ $('#setForm').onsubmit = async ev => {
   ev.preventDefault(); const m = $('#setMsg');
   const from = $('#s-from').value.trim();
   if (from && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(from)){ m.className = 'small errtxt'; m.textContent = 'The from email doesn\'t look right.'; return; }
-  const settings = { sourceQueries: lines($('#s-queries').value), recency: $('#s-recency').value, maxNewCompaniesPerRun: $('#s-maxnew').value, competitorsPerAccount: $('#s-comp').value, autoFindEmails: $('#s-autoemail').checked, maxEmailLookupsPerRun: $('#s-maxemail').value, autoDraft: $('#s-autodraft').checked, excludeExtra: lines($('#s-exclude').value), sender: { name: $('#s-name').value.trim(), title: $('#s-title').value.trim(), fromEmail: from, footer: $('#s-footer').value.trim() }, email: { provider: $('#s-provider').value, dailyCap: $('#s-cap').value, smtpUser: $('#s-smtpuser').value.trim(), smtpHost: $('#s-smtphost').value.trim(), smtpPort: $('#s-smtpport').value }, optOut: lines($('#s-optout').value), modelSmart: $('#s-msmart').value.trim() || 'claude-sonnet-5-5', modelFast: $('#s-mfast').value.trim() || 'claude-haiku-5-5' };
+  const settings = { sourceQueries: lines($('#s-queries').value), sourcesPerRun: $('#s-srcrun').value, searchesPerRun: $('#s-searchrun').value, suggestDomainAfter: $('#s-suggest').value, recency: $('#s-recency').value, maxNewCompaniesPerRun: $('#s-maxnew').value, competitorsPerAccount: $('#s-comp').value, autoFindEmails: $('#s-autoemail').checked, maxEmailLookupsPerRun: $('#s-maxemail').value, autoDraft: $('#s-autodraft').checked, excludeExtra: lines($('#s-exclude').value), sender: { name: $('#s-name').value.trim(), title: $('#s-title').value.trim(), fromEmail: from, footer: $('#s-footer').value.trim() }, email: { provider: $('#s-provider').value, dailyCap: $('#s-cap').value, smtpUser: $('#s-smtpuser').value.trim(), smtpHost: $('#s-smtphost').value.trim(), smtpPort: $('#s-smtpport').value }, optOut: lines($('#s-optout').value), modelSmart: $('#s-msmart').value.trim() || 'claude-sonnet-5-5', modelFast: $('#s-mfast').value.trim() || 'claude-haiku-5-5' };
   try { const r = await api('settings', { settings }); S.data.settings = r.settings; m.className = 'small okline'; m.textContent = 'Saved.'; } catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
 };
 

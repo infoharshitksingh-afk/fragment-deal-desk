@@ -12,7 +12,7 @@ Who it targets (from Fragment's October 2026 Series A positioning, "turn agents 
 
 One run:
 
-1. **Sources** companies from news and web searches (Settings → Sourcing searches): agent launches, new money products (wallets, payouts, cards, billing), funding rounds, moves to automated billing, expansions. Claude keeps only companies that fit the ICP. You can also paste a newsletter, a launch list or a conference exhibitor list.
+1. **Reads the source registry** (Sources tab): a curated list of pages (funding news, newsletters, directories, investor portfolios, event lists, market maps) checked every few days. Each source earns a weight from what it produces, so the best ones are checked more often and first. Only lines that are new since the last check go to Claude. Then a few **open searches** (Settings) run in rotation to catch what the registry misses. You can also paste a newsletter, a launch list or a conference exhibitor list.
 2. **Checks the company registry**, so a company is never added or researched twice. Customers named on Fragment's site and in press coverage, other ledger vendors, banks, investors, consultancies and staffing firms are excluded and remembered with the reason.
 3. **Researches** each new company (website, news, how money moves through the product, how far it is automated or agent-run) with Firecrawl and Claude, and scores it against the Fragment ICP (fit and timing, tiers 1–3).
 4. **Finds peers** at the same stage for strong-fit accounts and adds them to the queue.
@@ -47,6 +47,17 @@ Free and Hobby Firecrawl plans allow only a few requests a minute. The app sends
 ### Paste a list
 
 **Import and export → Paste news or a list** takes any text (a funding roundup, a launch newsletter, a conference exhibitor list) and keeps the companies that fit the ICP, with the signal that put them there.
+
+## Source registry and the company dataset
+
+The registry starts with 16 sources (funding news, newsletters, YC directories, the FirstMark and BoxGroup portfolios, the Money20/20 speaker list, market maps). Six were confirmed public when it was built; the rest are confirmed by their first check, and a source that fails three times in a row pauses itself.
+
+- **Weight.** `(Tier 1 + 0.5 × contacted + 2 × replied + 0.1 × kept + 4 × starting weight) ÷ (kept + 4)`, capped at 1.5, × 1.15 for warm paths (Fragment investor portfolios). A new source sits at its starting weight until it has about four accounts of its own record. Every account remembers which sources mentioned it, so outcomes flow back to the sources.
+- **Schedule.** A source is due after `check every (days) ÷ (0.5 + weight)` days; each run checks up to *Sources checked per run* (default 4), highest weight first.
+- **Change detection.** The last 3,000 lines of each page are kept; an unchanged page costs one Firecrawl scrape and no Claude call.
+- **Dataset.** Every mention of a company (source, date, quote, link) is stored. Research reads those first and skips a web search when there are already three or more.
+- **Suggestions.** Open searches count which unregistered sites keep producing fitting companies; after *N* (Settings, default 3) a site appears under Suggested sources with an *Add as source* button.
+- Respect each site's terms: remove any source whose terms forbid automated reading. Paywalled sites and LinkedIn are not included.
 
 ## Separate from other Deal Desk workspaces
 
