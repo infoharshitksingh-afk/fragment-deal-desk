@@ -68,6 +68,7 @@ export async function upsertCompany({ name, domain = '', source, signals = [], c
 }
 
 /* ---------- stage: source (news, launches, funding; no hiring signals) ---------- */
+const BATCH = 20; // news results per Claude call
 const SIGNAL_KEYS = () => Object.entries(ICP.signals).map(([k, v]) => `${k}: ${v.label}`).join('\n');
 export async function stageSource() {
   const [keys, settings] = await Promise.all([getKeys(), getSettings()]);
@@ -86,9 +87,15 @@ export async function stageSource() {
     if (errors.length) throw new UserError('News search failed: ' + errors[0], 502, 'source_failed');
     return { remaining: 0, message: 'News search found nothing new this time.' };
   }
-  const leads = (await extractLeads(keys, settings, results.join('\n\n'))).filter(l => l.relevant !== false);
-  const out = await importLeads(leads, settings, 'News search');
-  const msg = `Ran ${queries.length} searches, ${results.length} results, ${leads.length} relevant companies. ${out.summary}`;
+  // Read results in batches so one long reply can't be cut off; a batch that still fails is skipped, not fatal.
+  const leads = [];
+  for (let i = 0; i < results.length; i += BATCH) {
+    try { leads.push(...(await extractLeads(keys, settings, results.slice(i, i + BATCH).join('\n\n')))); }
+    catch (e) { if (['budget', 'missing_key', 'bad_key', 'rate_limit', 'keys_unreadable'].includes(e.code)) throw e; errors.push(`batch ${i / BATCH + 1}: ${e.message}`); }
+  }
+  const relevant = leads.filter(l => l.relevant !== false);
+  const out = await importLeads(relevant, settings, 'News search');
+  const msg = `Ran ${queries.length} searches, ${results.length} results, ${new Set(relevant.map(l => String(l.company).trim().toLowerCase())).size} relevant companies. ${out.summary}${errors.length ? ` ${errors.length} search or batch problems skipped.` : ''}`;
   await pushLog({ stage: 'source', message: msg });
   return { remaining: 0, message: msg, ...out, warnings: errors };
 }
@@ -99,16 +106,17 @@ async function extractLeads(keys, settings, text) {
 - B2B SaaS moving to automated or usage-based billing.
 Buyers are engineering and product teams. Today is ${today()}.
 
-From the news and web results (or pasted text) below, list every company that is itself doing something that fits. Return a JSON array. Each item:
-{"company": "name of the company doing the thing (not the publisher)", "domain": "example.com or empty", "type": one signal key below, "quote": "verbatim from the text, at most 25 words", "date": "YYYY-MM-DD or null", "url": "source URL or empty", "why": "one short line on the Fragment fit", "relevant": true or false, "vendor": true if it sells ledger, core banking or payments infrastructure to other companies, or is a bank, investor, consultancy, publisher or staffing firm}
+From the news and web results (or pasted text) below, list the companies that are themselves doing something that fits, at most 15, strongest first. Return a JSON array and nothing else. Each item:
+{"company": "name of the company doing the thing (not the publisher)", "domain": "example.com or empty", "type": one signal key below, "quote": "verbatim from the text, at most 20 words", "date": "YYYY-MM-DD or null", "url": "source URL or empty", "why": "at most 12 words on the Fragment fit", "relevant": true or false, "vendor": true if it sells ledger, core banking or payments infrastructure to other companies, or is a bank, investor, consultancy, publisher or staffing firm}
 Signal keys:
 ${SIGNAL_KEYS()}
 Ignore job postings and hiring news. Use only what the text shows.
 
 TEXT:
 ${String(text).slice(0, 60000)}`;
-  const arr = await claudeJson(keys, prompt, { model: settings.modelFast, maxTokens: 4000 });
-  return Array.isArray(arr) ? arr.filter(l => l && l.company && ICP.signals[l.type]) : [];
+  const arr = await claudeJson(keys, prompt, { model: settings.modelFast, maxTokens: 6000 });
+  const list = Array.isArray(arr) ? arr : (Array.isArray(arr?.companies) ? arr.companies : []);
+  return list.filter(l => l && l.company && ICP.signals[l.type]);
 }
 export async function importLeads(leads, settings, sourceLabel) {
   const byCo = new Map();
@@ -137,7 +145,8 @@ export async function importFeedText(text, label = 'Pasted list') {
   const [keys, settings] = await Promise.all([getKeys(), getSettings()]);
   text = String(text || '').trim();
   if (text.length < 40) throw new UserError('That text is too short. Paste a news page, newsletter, launch list or event exhibitor list.');
-  const all = await extractLeads(keys, settings, text);
+  const all = [];
+  for (let i = 0; i < text.length; i += 15000) all.push(...(await extractLeads(keys, settings, text.slice(i, i + 15000))));
   if (!all.length) throw new UserError(`No fitting companies were found in ${text.length.toLocaleString()} characters of text.`, 400, 'no_leads');
   const leads = all.filter(l => l.relevant !== false);
   const skipped = all.length - leads.length;

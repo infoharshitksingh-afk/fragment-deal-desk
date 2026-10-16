@@ -101,4 +101,8 @@ delete process.env.DD_SKIP_SEED;
 let s1 = (await api('state')).body, s2 = (await api('state')).body;
 ok(s1.accounts.length === st3.accounts.length && s2.accounts.length === s1.accounts.length, 'empty starting data adds nothing and loads once');
 ok(s1.model.CUSTOMERS.includes('Ramp') && s1.model.ICP.stack.length === 9 && !('ledger_job' in s1.model.ICP.signals) && s1.model.ICP.industries[0].k === 'agentic', 'UI receives the new ICP: agentic segment first, no hiring signal');
+const { parseJson } = await import('../api/_lib/providers.js');
+const cut = parseJson('[{"company":"A","type":"funding"},{"company":"B","type":"funding"},{"company":"C","ty');
+ok(Array.isArray(cut) && cut.length === 2 && cut[1].company === 'B', 'a reply cut off mid-list keeps every complete company');
+ok(parseJson('Here you go:\n```json\n[{"company":"A"}]\n```').length === 1, 'fenced JSON with a preamble still parses');
 srv.close();

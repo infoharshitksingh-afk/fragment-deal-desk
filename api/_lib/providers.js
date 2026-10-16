@@ -80,6 +80,13 @@ export function parseJson(text) {
   const s = Math.min(...['{', '['].map(c => t.indexOf(c)).filter(i => i >= 0));
   const e = Math.max(t.lastIndexOf('}'), t.lastIndexOf(']'));
   if (isFinite(s) && e > s) { try { return JSON.parse(t.slice(s, e + 1)); } catch {} }
+  // A reply cut off by the token limit: keep every complete object in the array and close it.
+  const a = t.indexOf('[');
+  if (a >= 0) {
+    for (let cut = t.lastIndexOf('}'); cut > a; cut = t.lastIndexOf('}', cut - 1)) {
+      try { const arr = JSON.parse(t.slice(a, cut + 1).replace(/,\s*$/, '') + ']'); if (Array.isArray(arr)) return arr; } catch {}
+    }
+  }
   throw new UserError("Claude's answer couldn't be read as JSON.", 502, 'invalid_json');
 }
 export async function claudeJson(keys, prompt, opts) { return parseJson(await claude(keys, prompt + '\n\nReply with the JSON only.', opts)); }
