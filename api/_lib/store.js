@@ -22,8 +22,11 @@ function findRedis() {
   return { url: url.replace(/\/$/, ''), token };
 }
 const { url: URL_, token: TOKEN } = findRedis();
-const FILE = process.env.DD_STORE_FILE || '/tmp/deal-desk-store.json';
-const P = 'dd:';
+const FILE = process.env.DD_STORE_FILE || '/tmp/fragment-deal-desk-store.json';
+// Every key is namespaced, so this workspace never reads another Deal Desk's data (for example the FlowGen one)
+// even when both are connected to the same Redis database. Change DD_NAMESPACE to start a fresh, empty workspace.
+const NS = String(process.env.DD_NAMESPACE || 'fragment').replace(/[^a-z0-9_-]/gi, '') || 'fragment';
+const P = `dd:${NS}:`;
 
 export const persistent = () => !!(URL_ && TOKEN) || !process.env.VERCEL;
 export const backend = () => (URL_ && TOKEN) ? 'redis' : 'file';

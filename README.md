@@ -48,6 +48,10 @@ Free and Hobby Firecrawl plans allow only a few requests a minute. The app sends
 
 **Import and export → Paste news or a list** takes any text (a funding roundup, a launch newsletter, a conference exhibitor list) and keeps the companies that fit the ICP, with the signal that put them there.
 
+## Separate from other Deal Desk workspaces
+
+All data is stored under the `dd:fragment:` prefix (set by `DD_NAMESPACE`, default `fragment`). If this project is connected to the same Upstash database as the FlowGen Deal Desk, it does not see FlowGen's accounts, contacts, registry or run history, and FlowGen's data is left untouched. To start over with an empty workspace, set `DD_NAMESPACE` to a new value and redeploy. API keys and settings are stored per namespace too, so paste them again after changing it.
+
 ## Sharing with the team
 
 - `ACCESS_CODE` is the **owner** code. In **Settings → Team access**, the owner sets a separate **team code** (stored hashed) and shares the site link and that code.
