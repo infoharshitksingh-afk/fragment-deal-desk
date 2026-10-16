@@ -25,13 +25,6 @@ export default handle(async (req, res) => {
       const left = r.j?.data?.remainingCredits ?? r.j?.data?.remaining_credits;
       return left != null ? `Key works. ${left} credits left.` : 'Key works.';
     },
-    theirstack: async k => {
-      const r = await check('https://api.theirstack.com/v0/catalog/keywords?keyword_type=technology&name_pattern=stripe&limit=8', { headers: { Authorization: `Bearer ${k}` } });
-      if (!r.ok) throw msgOf(r);
-      const rows = Array.isArray(r.j) ? r.j : (r.j?.data || []);
-      const slugs = rows.map(x => x.slug || x.keyword_slug).filter(Boolean).slice(0, 6);
-      return 'Key works.' + (slugs.length ? ' Payments technology slugs you can filter on: ' + slugs.join(', ') : '');
-    },
     apollo: async k => { const r = await check('https://api.apollo.io/api/v1/auth/health', { headers: { 'x-api-key': k } }); if (!r.ok || r.j?.is_logged_in === false) throw msgOf(r); return 'Key works. People Search still depends on your plan.'; },
     hunter: async k => { const r = await check('https://api.hunter.io/v2/account?api_key=' + encodeURIComponent(k), {}); if (!r.ok) throw msgOf(r); const s = r.j?.data?.requests?.searches; return s ? `Key works. ${s.available - s.used} searches left.` : 'Key works.'; },
     resend: async k => {

@@ -2,12 +2,11 @@
 // the browser (or the daily cron) calls stages in order until each reports nothing left.
 import { hgetall, hget, hset, hdel, pushLog } from './store.js';
 import { getKeys, getSettings } from './keys.js';
-import { claude, claudeJson, theirstackJobs, fcSearch, fcScrape, apolloPeopleSearch, apolloMatch, hunterFind, sendEmail } from './providers.js';
+import { claude, claudeJson, fcSearch, fcScrape, apolloPeopleSearch, apolloMatch, hunterFind, sendEmail } from './providers.js';
 import { ICP, EXCLUDE_RE, CUSTOMER_RE, CUSTOMERS, FORMATS, PERSONAS, DEFAULT_SLOTS, PROOF, slug, normDomain, docId, hostOf, today, score, roleFor, pickFormat } from './icp.js';
 import { UserError } from './auth.js';
 
 const BAD_HOSTS = /linkedin|wikipedia|facebook|twitter|x\.com|instagram|youtube|glassdoor|indeed|zoominfo|crunchbase|bloomberg|dnb\.com|rocketreach|apollo\.io|craft\.co|comparably|builtin|ziprecruiter|tsenta|lusha|owler|yahoo|reuters|sec\.gov|google\.|bing\.|mapquest|yelp|bbb\.org|greenhouse\.io|lever\.co|ashbyhq|myworkdayjobs|workday\.com|icims|smartrecruiters/i;
-const ATS = /greenhouse\.io|lever\.co|myworkdayjobs|workday|ashbyhq|icims|successfactors|smartrecruiters|jobvite|taleo|oraclecloud|eightfold|phenom|\/careers|careers\.|jobs\./i;
 const now = () => new Date().toISOString();
 
 /* ---------- data access ---------- */
@@ -68,76 +67,61 @@ export async function upsertCompany({ name, domain = '', source, signals = [], c
   return { status: 'added', id };
 }
 
-/* ---------- stage: source jobs ---------- */
-function sourcingQueries(settings) {
-  const roles = (settings.roles || []).filter(Boolean).slice(0, 8);
-  const roleExpr = roles.map(r => `"${r}"`).join(' OR ');
-  return (settings.portals || []).filter(Boolean).slice(0, 8).map(p => `site:${p} (${roleExpr})`);
-}
-// TheirStack: structured postings, no extraction step. Only fetches jobs posted since the last run so credits aren't spent twice.
-async function sourceTheirStack(keys, settings) {
-  const f = settings.theirstack || {};
-  const last = await hget('meta', 'theirstackLastRun');
-  const jobs = await theirstackJobs(keys, f, { sinceDate: last || undefined });
-  const mapped = jobs.map(j => ({
-    company: j.company, domain: j.domain, title: j.title, location: j.location, url: j.url,
-    days_ago: j.datePosted ? Math.max(0, Math.round((Date.now() - Date.parse(j.datePosted)) / 864e5)) : null,
-    tech: j.tech, vendor: false
-  }));
-  const out = await importJobs(mapped, settings, 'TheirStack');
-  await hset('meta', 'theirstackLastRun', today());
-  const full = jobs.length >= (f.limit || 50);
-  const msg = `TheirStack: ${jobs.length} postings${last ? ' since ' + last : ` from the last ${f.maxAgeDays ?? 7} days`}. ${out.summary}${full ? ' Hit the per-run job limit; raise it in Settings to pull more.' : ''}`;
-  await pushLog({ stage: 'source', message: msg });
-  return { remaining: 0, message: msg, ...out };
-}
-
+/* ---------- stage: source (news, launches, funding; no hiring signals) ---------- */
+const SIGNAL_KEYS = () => Object.entries(ICP.signals).map(([k, v]) => `${k}: ${v.label}`).join('\n');
 export async function stageSource() {
   const [keys, settings] = await Promise.all([getKeys(), getSettings()]);
-  if (keys.theirstack) return sourceTheirStack(keys, settings);
-  const queries = sourcingQueries(settings);
-  if (!queries.length) return { remaining: 0, message: 'No portals or roles set in Settings, so sourcing was skipped.' };
+  const queries = (settings.sourceQueries || []).filter(Boolean).slice(0, 10);
+  if (!queries.length) return { remaining: 0, message: 'No sourcing searches set in Settings, so sourcing was skipped.' };
   const results = [], errors = []; let firstErr = null;
   await Promise.all(queries.map(async q => {
-    try { const r = await fcSearch(keys, q, { limit: 10, tbs: settings.recency || undefined }); for (const x of r.web) results.push({ url: x.url, title: x.title || '', description: x.description || '', query: q }); }
-    catch (e) { firstErr ||= e; errors.push(`${q.split(' ')[0]}: ${e.message}`); }
+    try {
+      const r = await fcSearch(keys, q, { limit: 8, news: true, tbs: settings.recency || undefined });
+      for (const x of r.news || []) results.push(`URL: ${x.url}\nTITLE: ${x.title || ''}\nDATE: ${x.date || ''}\nSNIPPET: ${x.snippet || x.description || ''}`);
+      for (const x of r.web || []) results.push(`URL: ${x.url}\nTITLE: ${x.title || ''}\nSNIPPET: ${x.description || ''}`);
+    } catch (e) { firstErr ||= e; errors.push(`${q.slice(0, 40)}: ${e.message}`); }
   }));
   if (!results.length) {
     if (['rate_limit', 'missing_key', 'bad_key', 'keys_unreadable'].includes(firstErr?.code)) throw firstErr;
-    if (errors.length) throw new UserError('Job search failed: ' + errors[0], 502, 'source_failed');
-    return { remaining: 0, message: 'Job search found no postings this time.' };
+    if (errors.length) throw new UserError('News search failed: ' + errors[0], 502, 'source_failed');
+    return { remaining: 0, message: 'News search found nothing new this time.' };
   }
-  const jobs = (await extractJobs(keys, settings, results.map(r => `URL: ${r.url}\nTITLE: ${r.title}\nSNIPPET: ${r.description}`).join('\n\n'))).filter(relevantJob);
-  const out = await importJobs(jobs, settings, 'Job portals');
-  await pushLog({ stage: 'source', message: `Searched ${queries.length} portals, ${results.length} results, ${jobs.length} postings. ${out.summary}` });
-  return { remaining: 0, message: `Searched ${queries.length} job portals: ${jobs.length} postings. ${out.summary}`, ...out, warnings: errors };
+  const leads = (await extractLeads(keys, settings, results.join('\n\n'))).filter(l => l.relevant !== false);
+  const out = await importLeads(leads, settings, 'News search');
+  const msg = `Ran ${queries.length} searches, ${results.length} results, ${leads.length} relevant companies. ${out.summary}`;
+  await pushLog({ stage: 'source', message: msg });
+  return { remaining: 0, message: msg, ...out, warnings: errors };
 }
-async function extractJobs(keys, settings, text) {
-  const prompt = `Extract job postings from these job-board search results (or pasted job-board text). Return a JSON array. Each item: {"company": "hiring company name (from the URL path or title, e.g. boards.greenhouse.io/acme -> Acme)", "title": "job title", "location": "location or empty", "days_ago": number or null, "url": "posting URL or empty", "vendor": true if the hiring company is a consulting firm, staffing or recruiting agency, or a vendor that sells ledger or payments infrastructure to other companies, else false}.
-Include EVERY real job posting in the text, and add "relevant": true if the role is about building or running money movement inside the hiring company's own product: ledger, payments, billing, wallets, payouts, money movement, treasury or platform engineering for financial flows, or a reconciliation or financial-operations role; otherwise false. Ignore navigation, filters and match percentages. Use only what the text shows.
+async function extractLeads(keys, settings, text) {
+  const prompt = `You find prospects for Fragment (fragment.dev), a ledger API that enforces double-entry correctness so money can't move unless the numbers balance, with Payments and Recon on the same records. Fragment sells to:
+- vertical AI and agentic-commerce companies whose agents run billing, payments or accounting for their customers;
+- fintechs and digital platforms with multi-directional fund flows: corporate cards and spend management, financial software (AP/AR, billing), marketplaces with payouts, cross-border payments, remittance and logistics fintech;
+- B2B SaaS moving to automated or usage-based billing.
+Buyers are engineering and product teams. Today is ${today()}.
+
+From the news and web results (or pasted text) below, list every company that is itself doing something that fits. Return a JSON array. Each item:
+{"company": "name of the company doing the thing (not the publisher)", "domain": "example.com or empty", "type": one signal key below, "quote": "verbatim from the text, at most 25 words", "date": "YYYY-MM-DD or null", "url": "source URL or empty", "why": "one short line on the Fragment fit", "relevant": true or false, "vendor": true if it sells ledger, core banking or payments infrastructure to other companies, or is a bank, investor, consultancy, publisher or staffing firm}
+Signal keys:
+${SIGNAL_KEYS()}
+Ignore job postings and hiring news. Use only what the text shows.
 
 TEXT:
 ${String(text).slice(0, 60000)}`;
   const arr = await claudeJson(keys, prompt, { model: settings.modelFast, maxTokens: 4000 });
-  return Array.isArray(arr) ? arr.filter(j => j && j.company && j.title) : [];
+  return Array.isArray(arr) ? arr.filter(l => l && l.company && ICP.signals[l.type]) : [];
 }
-const relevantJob = j => j.relevant !== false;
-export async function importJobs(jobs, settings, sourceLabel) {
+export async function importLeads(leads, settings, sourceLabel) {
   const byCo = new Map();
-  for (const j of jobs) { const c = String(j.company).trim(); if (!byCo.has(c)) byCo.set(c, []); byCo.get(c).push(j); }
+  for (const l of leads) { const c = String(l.company).trim(); if (!byCo.has(c)) byCo.set(c, []); byCo.get(c).push(l); }
   let added = 0, updated = 0, known = 0, excluded = 0, capped = 0;
   const addedNames = [], excludedNames = [];
   for (const [company, list] of byCo) {
-    const sigs = list.map(j => ({
-      type: /reconcil|fin ?ops|financial operations|finance operations|payment operations|treasury analyst/i.test(j.title) ? 'recon_pain' : 'ledger_job',
-      quote: String(j.title).slice(0, 160) + (j.location ? ` (${String(j.location).slice(0, 60)})` : ''),
-      source: 'feed', origin: 'feed', feed: sourceLabel, url: j.url || '',
-      ...(j.tech?.length ? { tech: j.tech } : {}),
-      date: (j.days_ago != null && !isNaN(Number(j.days_ago))) ? new Date(Date.now() - Number(j.days_ago) * 864e5).toISOString().slice(0, 10) : today(),
-      why: j.tech?.length ? 'open role; mentions ' + j.tech.join(', ') : 'open role'
+    const sigs = list.map(l => ({
+      type: l.type, quote: String(l.quote || '').slice(0, 200), source: 'feed', origin: 'feed', feed: sourceLabel, url: l.url || '',
+      date: /^\d{4}-\d{2}-\d{2}$/.test(l.date || '') ? l.date : today(), why: String(l.why || '').slice(0, 200)
     }));
-    const domain = list.map(j => j.domain).find(Boolean) || '';
-    if (list.some(j => j.vendor)) { await register(company, { status: 'excluded', reason: 'Infrastructure vendor, consultancy or staffing firm (from posting)', source: sourceLabel }); excluded++; excludedNames.push(company); continue; }
+    const domain = list.map(l => l.domain).find(Boolean) || '';
+    if (list.some(l => l.vendor)) { await register(company, { status: 'excluded', reason: 'Infrastructure vendor, bank, investor, consultancy or publisher', source: sourceLabel }); excluded++; excludedNames.push(company); continue; }
     const ex = await findExisting(company, domain);
     if (!ex && added >= settings.maxNewCompaniesPerRun) { capped++; continue; }
     const r = await upsertCompany({ name: company, domain, source: sourceLabel, signals: sigs }, settings);
@@ -149,23 +133,23 @@ export async function importJobs(jobs, settings, sourceLabel) {
   const summary = `${added} new companies, ${updated} updated, ${known} already known, ${excluded} excluded${capped ? `, ${capped} held back by the per-run limit` : ''}.`;
   return { added, updated, known, excluded, capped, addedNames, excludedNames, summary };
 }
-export async function importFeedText(text, label = 'Pasted feed') {
+export async function importFeedText(text, label = 'Pasted list') {
   const [keys, settings] = await Promise.all([getKeys(), getSettings()]);
   text = String(text || '').trim();
-  if (text.length < 40) throw new UserError('That text is too short to contain job postings. Copy the whole job list and try again.');
-  const all = await extractJobs(keys, settings, text);
-  if (!all.length) throw new UserError(`No job postings were found in ${text.length.toLocaleString()} characters of text. Make sure the job list itself was copied (scroll to load it first), not just the page menu.`, 400, 'no_postings');
-  const jobs = all.filter(relevantJob);
-  const skipped = all.length - jobs.length;
-  if (!jobs.length) {
-    const message = `${label}: found ${all.length} postings, but none are ledger, payments, billing or finance-operations roles, so nothing was added.`;
+  if (text.length < 40) throw new UserError('That text is too short. Paste a news page, newsletter, launch list or event exhibitor list.');
+  const all = await extractLeads(keys, settings, text);
+  if (!all.length) throw new UserError(`No fitting companies were found in ${text.length.toLocaleString()} characters of text.`, 400, 'no_leads');
+  const leads = all.filter(l => l.relevant !== false);
+  const skipped = all.length - leads.length;
+  if (!leads.length) {
+    const message = `${label}: found ${all.length} companies, but none fit Fragment's segments, so nothing was added.`;
     await pushLog({ stage: 'import', message });
-    return { postings: all.length, relevant: 0, added: 0, updated: 0, known: 0, excluded: 0, message, summary: 'Nothing relevant.' };
+    return { found: all.length, relevant: 0, added: 0, updated: 0, known: 0, excluded: 0, message, summary: 'Nothing relevant.' };
   }
-  const out = await importJobs(jobs, settings, label);
-  const message = `${label}: ${all.length} postings, ${jobs.length} relevant${skipped ? ` (${skipped} unrelated roles skipped)` : ''}. ${out.summary}`;
+  const out = await importLeads(leads, settings, label);
+  const message = `${label}: ${all.length} companies, ${leads.length} relevant${skipped ? ` (${skipped} outside the ICP skipped)` : ''}. ${out.summary}`;
   await pushLog({ stage: 'import', message });
-  return { postings: all.length, relevant: jobs.length, message, ...out };
+  return { found: all.length, relevant: leads.length, message, ...out };
 }
 
 /* ---------- stage: research ---------- */
@@ -192,21 +176,13 @@ export async function researchAccount(id) {
       if (h) { a.domain = h; notes.push('website ' + h); }
     } catch (e) { notes.push('website lookup failed'); }
   }
-  if (!a.careersUrl) {
-    try {
-      const r = await fcSearch(keys, `${a.name} careers open jobs`, { limit: 8 });
-      const root = (a.domain || '').split('.').slice(-2, -1)[0] || '';
-      const hit = r.web.find(x => { const h = hostOf(x.url); return h && /career|job/i.test(x.url + ' ' + (x.title || '')) && (ATS.test(x.url) || (root && h.includes(root))) && !/linkedin|indeed|glassdoor|ziprecruiter/i.test(h); });
-      if (hit) { a.careersUrl = hit.url; notes.push('careers page'); }
-    } catch (e) { notes.push('careers lookup failed'); }
-  }
   const sources = []; let n = 0;
   const add = (kind, url, title, text, date) => { if (url && text) sources.push({ id: 'S' + (++n), kind, url, title: String(title || '').slice(0, 160), date: date || null, text: String(text).slice(0, kind === 'page' ? 12000 : 900) }); };
   const tasks = [
     fcSearch(keys, `"${a.name}" (launches OR raises OR "Series" OR wallet OR payouts OR card OR CTO OR "VP Engineering")`, { limit: 8, news: true, tbs: 'qdr:y' }).then(r => { for (const x of r.news) add('news', x.url, x.title, `${x.title || ''}. ${x.snippet || x.description || ''}`, x.date); for (const x of r.web) add('web', x.url, x.title, `${x.title || ''}. ${x.description || ''}`); }),
-    fcSearch(keys, `"${a.name}" ("ledger" OR "double-entry" OR "payments engineer" OR "billing engineer" OR "money movement" OR "reconciliation")`, { limit: 6 }).then(r => { for (const x of r.web) add('jobs', x.url, x.title, `${x.title || ''}. ${x.description || ''}`); })
+    fcSearch(keys, `"${a.name}" ("AI agent" OR agents OR billing OR payouts OR ledger OR reconciliation OR "money movement")`, { limit: 6 }).then(r => { for (const x of r.web) add('web', x.url, x.title, `${x.title || ''}. ${x.description || ''}`); })
   ];
-  if (a.careersUrl) tasks.push(fcScrape(keys, a.careersUrl).then(t => add('page', a.careersUrl, 'Careers page', t)));
+  if (a.domain) tasks.push(fcScrape(keys, 'https://' + a.domain).then(t => add('page', 'https://' + a.domain, 'Company website', t)));
   if (a.newsUrl) tasks.push(fcScrape(keys, a.newsUrl).then(t => add('page', a.newsUrl, 'Newsroom', t)));
   const settled = await Promise.allSettled(tasks);
   const failed = settled.filter(s => s.status === 'rejected');
@@ -217,11 +193,11 @@ export async function researchAccount(id) {
   }
   const known = (a.importedSignals || []).map(x => x.quote).join('; ');
   const sigTypes = Object.entries(ICP.signals).map(([k, v]) => `${k}: ${v.label}`).join('\n');
-  const prompt = `You research B2B accounts for Fragment (fragment.dev), which sells a ledger API, plus Payments and Recon, to companies that move money between many parties: marketplaces, brokers, fintechs, billing and creator platforms. Fragment prices per ledger entry. Today is ${today()}.
+  const prompt = `You research B2B accounts for Fragment (fragment.dev). Fragment gives agents and engineering teams a ledger API that enforces double-entry correctness, so money can't move unless the numbers balance, with Payments and Recon on the same records. It sells to vertical AI companies automating their customers' billing, payments and accounting, and to fintechs and digital platforms with multi-directional fund flows. Buyers are engineering and product teams. Today is ${today()}.
 
 Company: ${a.name}${a.domain ? ' (' + a.domain + ')' : ''}
 Notes: ${a.notes || 'none'}
-Open roles already known (do NOT repeat as signals): ${known || 'none'}
+Signals already known from sourcing (do NOT repeat): ${known || 'none'}
 
 Read ONLY the sources below. Every claim must come from a source.
 
@@ -236,9 +212,10 @@ Return ONE JSON object:
  "disqualifiers": ["short reason"] (consultancy or staffing firm; sells ledger or payments infrastructure itself; shut down or acquired; no money movement in the product),
  "outreach_angle": "one line"}
 
-Stage bands: seed, ab (Series A or B), growth (Series C or later, private), public, tiny (no funding or no product).
+Stage bands: seed, ab (Series A to C), growth (late-stage private), public, tiny (no funding or no product).
 Segments: ${ICP.industries.filter(o => o.k).map(o => o.k + ' = ' + o.label).join('; ')}.
-Ledger stack: "homegrown_strain" only with evidence of an in-house ledger causing problems or being rebuilt; "app_db" when balances live in the app database or spreadsheets; "greenfield" when a money product is launching without a ledger mentioned; "psp_only" when they rely on Stripe or a bank partner for balances; "homegrown_ok" for a mature in-house ledger team; "vendor" if they use another ledger vendor; "unknown" when no source shows it.
+Technology fit (stack): "agents_live" when AI agents already move money, bill or do accounting in the product; "automating" when the company is moving to automated billing or algorithmic payments; "homegrown_strain" with evidence of an in-house ledger causing problems; "app_db" when balances live in the app database or spreadsheets; "greenfield" when a money product launches without a ledger mentioned; "psp_only" when they rely on Stripe or a bank partner for balances; "homegrown_ok" for a mature in-house ledger team; "vendor" for another ledger vendor; "unknown" when no source shows it.
+Ignore hiring and job posts as signals.
 Signal keys:
 ${sigTypes}
 Rules: only signals clearly about ${a.name} itself; at most 6, strongest first.
@@ -249,7 +226,7 @@ ${sources.map(x => `[${x.id}] (${x.kind}${x.date ? ', ' + x.date : ''}) ${x.url}
   const valid = new Set(sources.map(x => x.id));
   const signals = (Array.isArray(out.signals) ? out.signals : []).filter(x => x && ICP.signals[x.type] && valid.has(x.source) && x.quote).slice(0, 6)
     .map(x => ({ type: x.type, quote: String(x.quote).slice(0, 300), source: x.source, date: /^\d{4}-\d{2}-\d{2}$/.test(x.date || '') ? x.date : null, why: String(x.why || '').slice(0, 200) }));
-  a = { ...(await getAccount(id)), domain: a.domain, careersUrl: a.careersUrl };
+  a = { ...(await getAccount(id)), domain: a.domain };
   a.research = {
     summary: String(out.summary || '').slice(0, 800),
     stack: { landscape: ICP.stack.some(o => o.k === out.stack?.landscape) ? out.stack.landscape : 'unknown', evidence: String(out.stack?.evidence || '').slice(0, 300), source: valid.has(out.stack?.source) ? out.stack.source : '' },

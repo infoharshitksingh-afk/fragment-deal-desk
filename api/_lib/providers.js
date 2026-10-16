@@ -7,8 +7,6 @@ export const ENDPOINTS = {
   anthropic: 'https://api.anthropic.com/v1/messages',
   firecrawlSearch: 'https://api.firecrawl.dev/v2/search',
   firecrawlScrape: 'https://api.firecrawl.dev/v2/scrape',
-  theirstackJobs: 'https://api.theirstack.com/v1/jobs/search',
-  theirstackKeywords: 'https://api.theirstack.com/v0/catalog/keywords',
   apolloPeopleSearch: 'https://api.apollo.io/api/v1/mixed_people/api_search',
   apolloPeopleMatch: 'https://api.apollo.io/api/v1/people/match',
   hunterFinder: 'https://api.hunter.io/v2/email-finder',
@@ -85,47 +83,6 @@ export function parseJson(text) {
   throw new UserError("Claude's answer couldn't be read as JSON.", 502, 'invalid_json');
 }
 export async function claudeJson(keys, prompt, opts) { return parseJson(await claude(keys, prompt + '\n\nReply with the JSON only.', opts)); }
-
-/* ---------- TheirStack ---------- */
-// Structured job postings across job boards. Docs: theirstack.com/en/docs/api-reference/jobs/search_jobs_v1
-export async function theirstackJobs(keys, f, { sinceDate } = {}) {
-  need(keys.theirstack, 'TheirStack', keys);
-  const body = {
-    job_title_or: f.titles || [], job_title_not: f.titlesNot || [],
-    job_description_pattern_or: f.descriptionPatterns || [], job_technology_slug_or: f.technologySlugs || [],
-    job_country_code_or: f.countries || [], company_type: 'direct_employer',
-  };
-  if (sinceDate) body.posted_at_gte = sinceDate; else body.posted_at_max_age_days = f.maxAgeDays ?? 7;
-  if (f.minEmployees) body.min_employee_count = Number(f.minEmployees);
-  if (f.maxEmployees) body.max_employee_count = Number(f.maxEmployees);
-  for (const k of Object.keys(body)) if (Array.isArray(body[k]) && !body[k].length) delete body[k];
-  // Pages of 25: the free plan rejects larger pages, and paid plans are billed per job either way.
-  const left = await remaining('theirstack');
-  if (left < 1) await spend('theirstack'); // throws the daily-limit message
-  const want = Math.min(Math.max(1, Number(f.limit) || 50), left), PAGE = 25, rows = [];
-  for (let i = 0; rows.length < want && i < 20; i++) {
-    const limit = Math.min(PAGE, want - rows.length);
-    const j = await call(ENDPOINTS.theirstackJobs, { method: 'POST', headers: { Authorization: `Bearer ${keys.theirstack}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, limit, offset: rows.length }) }, 'TheirStack');
-    const got = j.data || [];
-    rows.push(...got); await record('theirstack', got.length);
-    if (got.length < limit) break;
-  }
-  return rows.map(x => ({
-    company: x.company || x.company_object?.name || '',
-    domain: x.company_domain || x.company_object?.domain || '',
-    title: x.job_title || '',
-    location: x.short_location || x.location || '',
-    url: x.final_url || x.url || x.source_url || '',
-    datePosted: x.date_posted || '',
-    employees: x.company_object?.employee_count ?? null,
-    tech: (x.technology_slugs || []).slice(0, 6)
-  })).filter(x => x.company && x.title);
-}
-export async function theirstackTechLookup(keys, pattern) {
-  need(keys.theirstack, 'TheirStack', keys);
-  const q = new URLSearchParams({ keyword_type: 'technology', name_pattern: pattern, limit: '10' });
-  return call(`${ENDPOINTS.theirstackKeywords}?${q}`, { headers: { Authorization: `Bearer ${keys.theirstack}` } }, 'TheirStack');
-}
 
 /* ---------- Firecrawl ---------- */
 export async function fcSearch(keys, query, { limit = 8, news = false, tbs } = {}) {

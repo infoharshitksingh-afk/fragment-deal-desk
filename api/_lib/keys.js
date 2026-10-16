@@ -7,7 +7,6 @@ import { get, set, hgetall as _hgetall, hincr, expire } from './store.js';
 export const KEY_FIELDS = {
   anthropic: { env: 'ANTHROPIC_API_KEY', label: 'Anthropic (Claude)' },
   firecrawl: { env: 'FIRECRAWL_API_KEY', label: 'Firecrawl' },
-  theirstack: { env: 'THEIRSTACK_API_KEY', label: 'TheirStack (job postings)' },
   apollo: { env: 'APOLLO_API_KEY', label: 'Apollo.io' },
   hunter: { env: 'HUNTER_API_KEY', label: 'Hunter.io' },
   resend: { env: 'RESEND_API_KEY', label: 'Resend' },
@@ -18,22 +17,17 @@ export const KEY_FIELDS = {
 };
 
 export const DEFAULT_SETTINGS = {
-  roles: ['ledger engineer', 'payments engineer', 'billing engineer', 'money movement engineer', 'head of payments', 'financial operations reconciliation'],
-  portals: ['boards.greenhouse.io', 'jobs.lever.co', 'myworkdayjobs.com', 'jobs.ashbyhq.com', 'linkedin.com/jobs'],
-  recency: 'qdr:w',
-  tsentaUrl: 'https://dashboard.tsenta.com/dashboard/recommendations',
-  // TheirStack sourcing (used instead of the Firecrawl job search when its key is set). 1 TheirStack credit per job returned.
-  theirstack: {
-    titles: ['ledger', 'payments engineer', 'billing engineer', 'money movement', 'payments platform', 'reconciliation'],
-    titlesNot: ['consultant', 'recruiter', 'intern', 'freelance', 'sales'],
-    descriptionPatterns: ['double-entry', 'ledger'],
-    technologySlugs: [],
-    countries: ['US', 'CA', 'GB'],
-    minEmployees: 15,
-    maxEmployees: 3000,
-    maxAgeDays: 7,
-    limit: 50
-  },
+  // News and launch searches run through Firecrawl each sourcing run. Hiring is not used.
+  sourceQueries: [
+    'startup launches AI agent for billing OR payments OR "accounts payable" OR accounting',
+    '"agentic commerce" OR "agentic payments" startup raises OR launches',
+    'fintech raises "Series A" OR "Series B" payments OR billing OR "spend management"',
+    'launches wallet OR "instant payouts" OR "corporate card" OR "embedded payments"',
+    'marketplace launches "seller payouts" OR "split payments"',
+    'cross-border payments OR remittance startup launches OR raises',
+    'launches "usage-based billing" OR "automated billing" B2B'
+  ],
+  recency: 'qdr:m',
   maxNewCompaniesPerRun: 15,
   competitorsPerAccount: 3,
   autoFindEmails: false,
@@ -44,7 +38,7 @@ export const DEFAULT_SETTINGS = {
   sender: { name: '', title: '', fromEmail: '', footer: '' },
   email: { provider: 'none', smtpHost: 'smtp.gmail.com', smtpPort: 465, smtpUser: '', dailyCap: 25 },
   // Daily caps on paid calls, for everyone using the workspace. Owner-only in Settings.
-  limits: { anthropic: 400, firecrawl: 300, theirstack: 100, apollo: 60, hunter: 30 },
+  limits: { anthropic: 400, firecrawl: 300, apollo: 60, hunter: 30 },
   optOut: [],
   excludeExtra: []
 };
@@ -97,20 +91,15 @@ export async function saveKeys(patch) {
 }
 export async function getSettings() {
   const s = (await get('settings')) || {};
-  return { ...DEFAULT_SETTINGS, ...s, sender: { ...DEFAULT_SETTINGS.sender, ...(s.sender || {}) }, email: { ...DEFAULT_SETTINGS.email, ...(s.email || {}) }, theirstack: { ...DEFAULT_SETTINGS.theirstack, ...(s.theirstack || {}) }, limits: { ...DEFAULT_SETTINGS.limits, ...(s.limits || {}) } };
+  return { ...DEFAULT_SETTINGS, ...s, sender: { ...DEFAULT_SETTINGS.sender, ...(s.sender || {}) }, email: { ...DEFAULT_SETTINGS.email, ...(s.email || {}) }, limits: { ...DEFAULT_SETTINGS.limits, ...(s.limits || {}) } };
 }
 export async function saveSettings(patch) {
   const cur = await getSettings();
-  const next = { ...cur, ...patch, sender: { ...cur.sender, ...(patch.sender || {}) }, email: { ...cur.email, ...(patch.email || {}) }, theirstack: { ...cur.theirstack, ...(patch.theirstack || {}) }, limits: { ...cur.limits, ...(patch.limits || {}) } };
+  const next = { ...cur, ...patch, sender: { ...cur.sender, ...(patch.sender || {}) }, email: { ...cur.email, ...(patch.email || {}) }, limits: { ...cur.limits, ...(patch.limits || {}) } };
   for (const k of Object.keys(DEFAULT_SETTINGS.limits)) next.limits[k] = Math.max(0, Math.min(100000, Math.round(Number(next.limits[k]) || 0)));
-  const ts = next.theirstack;
-  for (const k of ['titles', 'titlesNot', 'descriptionPatterns', 'technologySlugs', 'countries']) if (!Array.isArray(ts[k])) ts[k] = cur.theirstack[k];
-  ts.countries = ts.countries.map(c => String(c).trim().toUpperCase()).filter(c => /^[A-Z]{2}$/.test(c));
-  for (const k of ['minEmployees', 'maxEmployees']) ts[k] = ts[k] === '' || ts[k] == null ? null : Math.max(0, Number(ts[k]) || 0);
-  next.tsentaUrl = /^https:\/\/[^\s]+$/.test(String(next.tsentaUrl || '')) ? String(next.tsentaUrl).slice(0, 300) : cur.tsentaUrl;
-  ts.maxAgeDays = Math.max(0, Math.min(90, Number(ts.maxAgeDays) || 7));
-  ts.limit = Math.max(1, Math.min(500, Number(ts.limit) || 50));
-  for (const k of ['roles', 'portals', 'optOut', 'excludeExtra']) if (!Array.isArray(next[k])) next[k] = cur[k];
+  next.sourceQueries = Array.isArray(next.sourceQueries) ? next.sourceQueries.map(q => String(q).trim().slice(0, 300)).filter(Boolean).slice(0, 10) : cur.sourceQueries;
+  if (!['', 'qdr:d', 'qdr:w', 'qdr:m', 'qdr:y'].includes(next.recency)) next.recency = cur.recency;
+  for (const k of ['optOut', 'excludeExtra']) if (!Array.isArray(next[k])) next[k] = cur[k];
   for (const k of ['maxNewCompaniesPerRun', 'competitorsPerAccount', 'maxEmailLookupsPerRun']) next[k] = Math.max(0, Math.min(100, Number(next[k]) || 0));
   next.email.dailyCap = Math.max(1, Math.min(500, Number(next.email.dailyCap) || 25));
   await set('settings', next);
@@ -118,7 +107,7 @@ export async function saveSettings(patch) {
 }
 
 // Usage counters per day (UTC). spend() checks the cap first so a runaway run stops cleanly.
-const LIMIT_NAMES = { anthropic: 'Claude', firecrawl: 'Firecrawl', theirstack: 'TheirStack', apollo: 'Apollo', hunter: 'Hunter' };
+const LIMIT_NAMES = { anthropic: 'Claude', firecrawl: 'Firecrawl', apollo: 'Apollo', hunter: 'Hunter' };
 const dayKey = () => 'usage:' + new Date().toISOString().slice(0, 10);
 export async function usageToday() { return _hgetall(dayKey()); }
 export async function remaining(provider) {

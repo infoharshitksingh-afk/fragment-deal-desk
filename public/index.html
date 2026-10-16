@@ -163,7 +163,7 @@ tr:last-child td{border-bottom:0}
 <section id="view-pipeline" hidden>
   <div class="head">
     <div><div class="eyebrow">Agent</div><h1 style="margin-top:10px">Run the pipeline</h1></div>
-    <p class="muted">One run finds companies hiring ledger, payments and billing engineers, skips anyone already in the registry or already a Fragment customer, researches how money moves through each product, scores it against the Fragment ICP, finds peers at the same stage, finds the payments lead, CTO and finance lead for Tier 1, and drafts first emails. Nothing is sent until you approve it.</p>
+    <p class="muted">One run searches news for agent launches, new money products and funding rounds at vertical AI companies, fintechs and platforms, skips anyone already in the registry or already a Fragment customer, researches how money moves through each product and how far it is automated, scores it against the Fragment ICP, finds peers, finds the payments lead, CTO and product lead for Tier 1, and drafts first emails. Nothing is sent until you approve it.</p>
   </div>
   <div id="setupChecklist"></div>
   <div class="stages" id="stages"></div>
@@ -183,12 +183,12 @@ tr:last-child td{border-bottom:0}
 <section id="view-accounts" hidden>
   <div class="head">
     <div><div class="eyebrow">Outbound pipeline</div><h1 style="margin-top:10px">Accounts</h1></div>
-    <p class="muted">Every company the agent has kept, scored on fit (segment, ledger stack, stage, HQ, money movement) and timing (signals that decay over time). Open one to see its signals, people and drafts.</p>
+    <p class="muted">Every company the agent has kept, scored on fit (segment, technology fit, stage, HQ, money movement) and timing (signals that decay over time). Open one to see its signals, people and drafts.</p>
   </div>
   <div class="toolbar">
     <input id="q" type="search" placeholder="Search accounts" aria-label="Search accounts">
     <select id="tierFilter" aria-label="Filter by tier"><option value="all">All tiers</option><option value="1">Tier 1: reach out now</option><option value="2">Tier 2: watch</option><option value="3">Tier 3: check fit</option><option value="out">Out or blocked</option><option value="unscored">Not researched</option></select>
-    <select id="srcFilter" aria-label="Filter by source"><option value="all">All sources</option><option value="jobs">From job postings</option><option value="comp">Peers</option><option value="manual">Added or imported</option></select>
+    <select id="srcFilter" aria-label="Filter by source"><option value="all">All sources</option><option value="jobs">From news and launches</option><option value="comp">Peers</option><option value="manual">Added or imported</option></select>
     <span class="faint small" id="count"></span>
     <span style="flex:1"></span>
     <span class="small" id="sendMsg"></span>
@@ -209,7 +209,7 @@ tr:last-child td{border-bottom:0}
 <section id="view-icp" hidden>
   <div class="head">
     <div><div class="eyebrow">Model</div><h1 style="margin-top:10px">Who Fragment sells to</h1></div>
-    <p class="muted">The scoring model behind every account, built from Fragment's public site: the customers page (marketplaces, brokers, fintechs), per-entry pricing, and the Ledgers, Payments and Recon products. Fit is out of 50, timing is out of 50. Tier 1 needs fit of 35 or more and timing of 20 or more. Edit <span class="mono">api/_lib/icp.js</span> to retune.</p>
+    <p class="muted">The scoring model behind every account, built from Fragment's public positioning: its October 2026 Series A ("turn agents into financial operators"), customer stories and the Ledgers, Payments and Recon products. Two target groups: vertical AI companies whose agents run billing, payments and accounting, and fintechs and platforms with multi-directional fund flows. Buyers are engineering and product teams. Hiring is not a signal. Fit is out of 50, timing is out of 50. Tier 1 needs fit of 35 or more and timing of 20 or more. Edit <span class="mono">api/_lib/icp.js</span> to retune.</p>
   </div>
   <div id="icpBody"></div>
 </section>
@@ -226,7 +226,7 @@ tr:last-child td{border-bottom:0}
 <section id="view-data" hidden>
   <div class="head">
     <div><div class="eyebrow">Data</div><h1 style="margin-top:10px">Import and export</h1></div>
-    <p class="muted">Export everything to Excel, or bring companies in by hand: paste a jobs feed (for example Tsenta's recommendations page), add one company, or import a CSV or a Deal Desk JSON file.</p>
+    <p class="muted">Export everything to Excel, or bring companies in by hand: paste a news page, newsletter, launch list or event exhibitor list, add one company, or import a CSV or a Deal Desk JSON file.</p>
   </div>
   <div class="split even">
     <div>
@@ -234,18 +234,11 @@ tr:last-child td{border-bottom:0}
         <p class="note">One workbook with five sheets: Accounts, Contacts, Signals, Drafts and Company registry.</p>
         <div class="row-actions"><button class="btn primary" type="button" id="exportBtn">Download Excel</button><span class="small" id="exportMsg"></span></div>
       </div></div>
-      <!-- Tsenta via Claude in Chrome: hidden for now; remove "hidden" to bring it back -->
-      <div class="panel" id="tsentaPanel" hidden><div class="panel-h"><h3>Pull from Tsenta with Claude in Chrome</h3></div><div class="panel-b">
-        <p class="note">Opens Tsenta and copies an instruction for Claude in Chrome. Paste it into the Claude side panel, or save it once as a shortcut (for example <b style="font-weight:500">/tsenta</b>) so it's one click after that. Claude reads your recommendations, enters them below and presses Import. The first time, Tsenta asks you to sign in or create an account; Claude stops and lets you do that.</p>
-        <label class="f" for="tsentaUrl">Tsenta page<input id="tsentaUrl" type="url"></label>
-        <div class="row-actions"><button class="btn primary" type="button" id="tsentaBtn">Pull from Tsenta</button><span class="small" id="tsentaMsg"></span></div>
-        <details style="margin-top:10px"><summary class="small faint">Show the instruction</summary><textarea id="tsentaPrompt" rows="9" readonly style="margin-top:8px"></textarea></details>
-      </div></div>
-      <div class="panel"><div class="panel-h"><h3>Paste a jobs feed</h3></div><div class="panel-b">
-        <p class="note">Select all on a job-board page, copy, and paste here. Claude pulls out the hiring companies; known and excluded ones are skipped.</p>
-        <label class="f" for="feedSource">Source<input id="feedSource" placeholder="e.g. Wellfound, YC Work at a Startup"></label>
+      <div class="panel"><div class="panel-h"><h3>Paste news or a list</h3></div><div class="panel-b">
+        <p class="note">Paste a funding roundup, a launch newsletter, a Product Hunt page or a conference exhibitor list. Claude pulls out companies that fit the ICP, with the signal; known, excluded and off-ICP ones are skipped.</p>
+        <label class="f" for="feedSource">Source<input id="feedSource" placeholder="e.g. Money20/20 exhibitors, Fintech newsletter"></label>
         <label class="f" for="feed">Pasted text<textarea id="feed" rows="6"></textarea></label>
-        <div class="row-actions"><button class="btn primary" type="button" id="feedBtn">Import feed</button><span class="small" id="feedMsg"></span></div>
+        <div class="row-actions"><button class="btn primary" type="button" id="feedBtn">Import list</button><span class="small" id="feedMsg"></span></div>
       </div></div>
     </div>
     <div>
@@ -288,29 +281,10 @@ tr:last-child td{border-bottom:0}
       </div></div>
     </div>
     <form class="panel" id="setForm"><div class="panel-h"><h3>Rules</h3></div><div class="panel-b">
-      <div class="note" style="margin-bottom:10px"><b style="font-weight:500">TheirStack sourcing</b> — used when a TheirStack key is set. Each run pulls only jobs posted since the last run.</div>
-      <div class="grid2">
-        <label class="f" for="ts-titles">Job titles containing (one per line; all words, any order)<textarea id="ts-titles" rows="4"></textarea></label>
-        <label class="f" for="ts-not">Skip titles containing<textarea id="ts-not" rows="4"></textarea></label>
-      </div>
-      <div class="grid2">
-        <label class="f" for="ts-tech">Technologies mentioned (TheirStack slugs; Test keys lists payments ones)<textarea id="ts-tech" rows="2"></textarea></label>
-        <label class="f" for="ts-desc">Description patterns (regex, e.g. (?i)double-entry)<textarea id="ts-desc" rows="2"></textarea></label>
-      </div>
+      <div class="note" style="margin-bottom:10px"><b style="font-weight:500">Sourcing searches</b> — each run searches news and the web for these, then Claude keeps companies that fit the ICP. Hiring is not used as a signal.</div>
+      <label class="f" for="s-queries">Searches (one per line, up to 10)<textarea id="s-queries" rows="8"></textarea></label>
       <div class="grid3">
-        <label class="f" for="ts-countries">Countries (ISO codes)<input id="ts-countries" placeholder="US, CA, GB"></label>
-        <label class="f" for="ts-min">Min employees<input id="ts-min" type="number" min="0"></label>
-        <label class="f" for="ts-max">Max employees<input id="ts-max" type="number" min="0"></label>
-      </div>
-      <div class="grid3">
-        <label class="f" for="ts-age">First run: posted in last N days<input id="ts-age" type="number" min="0" max="90"></label>
-        <label class="f" for="ts-limit">Max jobs per run (credits)<input id="ts-limit" type="number" min="1" max="500"></label>
-      </div>
-      <div class="note" style="margin:6px 0 10px"><b style="font-weight:500">Job-portal search</b> — used through Firecrawl when TheirStack isn't set.</div>
-      <label class="f" for="s-roles">Roles to search for (one per line)<textarea id="s-roles" rows="5"></textarea></label>
-      <label class="f" for="s-portals">Job portals (one domain per line)<textarea id="s-portals" rows="4"></textarea></label>
-      <div class="grid3">
-        <label class="f" for="s-recency">Posting age<select id="s-recency"><option value="qdr:d">Last day</option><option value="qdr:w">Last week</option><option value="qdr:m">Last month</option><option value="">Any time</option></select></label>
+        <label class="f" for="s-recency">News age<select id="s-recency"><option value="qdr:d">Last day</option><option value="qdr:w">Last week</option><option value="qdr:m">Last month</option><option value="qdr:y">Last year</option><option value="">Any time</option></select></label>
         <label class="f" for="s-maxnew">New companies per run<input id="s-maxnew" type="number" min="0" max="100"></label>
         <label class="f" for="s-comp">Competitors per account<input id="s-comp" type="number" min="0" max="10"></label>
       </div>
@@ -340,7 +314,7 @@ tr:last-child td{border-bottom:0}
       <label class="f" for="s-optout">Opt-out list (emails or domains, one per line)<textarea id="s-optout" rows="2"></textarea></label>
       <div class="grid2">
         <label class="f" for="s-msmart">Model for research and drafts<input id="s-msmart"></label>
-        <label class="f" for="s-mfast">Model for reading job feeds<input id="s-mfast"></label>
+        <label class="f" for="s-mfast">Model for reading news results<input id="s-mfast"></label>
       </div>
       <div class="row-actions"><button class="btn primary" type="submit">Save rules</button><span class="small" id="setMsg"></span><span style="flex:1"></span><button class="btn sm" type="button" id="signOut">Sign out of this browser</button></div>
     </div></form>
@@ -354,7 +328,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const S = { data:null, sel:null, view:'pipeline', run:null, busy:{}, msgs:{}, confirmDel:null };
 const STAGE_INFO = [
-  ['source','Source','Ledger, payments and billing engineering roles from TheirStack, or job-portal search'],
+  ['source','Source','Agent launches, money products and funding rounds from news search'],
   ['research','Research','Product, money flows, ledger stack, launches, funding, score'],
   ['competitors','Peers','Same-stage peers of strong-fit accounts'],
   ['people','People','Payments lead, CTO and finance lead for Tier 1'],
@@ -406,7 +380,6 @@ function render(){
   if (S.view === 'registry') renderRegistry();
   if (S.view === 'icp') renderIcp();
   if (S.view === 'settings') renderSettings();
-  if (S.view === 'data') renderTsenta();
 }
 const M = () => S.data.model;
 const lab = (list, k) => (list.find(o => o.k === (k || '')) || list[list.length - 1] || {}).label || '';
@@ -424,14 +397,14 @@ function renderIcp(){
   const sigs = Object.entries(ICP.signals).sort((a, b) => b[1].w - a[1].w);
   $('#icpBody').innerHTML = `<div class="icp-grid">
     ${ptsTable('Segment', 'up to 15 · use case drives the email', ICP.industries, 15)}
-    ${ptsTable('Ledger stack', 'up to 15 · how balances are kept today', ICP.stack, 15)}
-    ${ptsTable('Funding stage', 'up to 10', ICP.revenue, 10)}
+    ${ptsTable('Technology fit', 'up to 15 · how far money is automated or agent-run', ICP.stack, 15)}
+    ${ptsTable('Stage', 'up to 10', ICP.revenue, 10)}
     <div>${ptsTable('Money movement', 'up to 5', ICP.own, 5)}${ptsTable('HQ', 'up to 5', ICP.geo, 5)}</div>
   </div>
   <div class="panel" style="margin-top:14px"><div class="panel-h"><h3>Timing signals</h3><span class="small faint">weight halves every half-life · capped at 50</span></div><div class="panel-b"><div class="tablewrap"><table><thead><tr><th>Signal</th><th class="num">Weight</th><th class="num">Half-life</th><th>Email</th></tr></thead><tbody>${sigs.map(([k, v]) => `<tr><td>${esc(v.label)}</td><td class="num mono">${v.w}</td><td class="num mono">${v.hl}d</td><td class="small muted">${v.format}. ${esc(FORMATS[v.format].name)}</td></tr>`).join('')}</tbody></table></div></div></div>
   <div class="panel"><div class="panel-h"><h3>First-email formats</h3><span class="small faint">signal first, one value line, one proof point, one question</span></div><div class="panel-b"><div class="icp-grid">${Object.entries(FORMATS).map(([n, f]) => `<div class="fmt"><span class="eyebrow">Format ${n}</span><b style="font-weight:500">${esc(f.name)}</b><span class="mono small muted">Subject: ${esc(f.subject)}</span><pre>${esc(f.body)}</pre></div>`).join('')}</div></div></div>
   <div class="panel"><div class="panel-h"><h3>Buying committee</h3><span class="small faint">first three are filled for Tier 1</span></div><div class="panel-b"><div class="tablewrap"><table><thead><tr><th>Role</th><th>Who</th><th>What they hear</th></tr></thead><tbody>${Object.values(PERSONAS).map(p => `<tr><td>${esc(p.label)}</td><td class="small muted">${esc(p.search)}</td><td class="small">${esc(p.value)}</td></tr>`).join('')}</tbody></table></div></div></div>
-  <div class="panel"><div class="panel-h"><h3>Never contacted</h3></div><div class="panel-b"><p class="small">Existing customers from Fragment's public customers page: ${esc((CUSTOMERS || []).join(', '))}.</p><p class="small muted">Also excluded: other ledger vendors, infrastructure partners, consultancies and staffing firms, plus anything on the exclude list in Settings.</p></div></div>`;
+  <div class="panel"><div class="panel-h"><h3>Never contacted</h3></div><div class="panel-b"><p class="small">Customers named on Fragment's site and in press coverage: ${esc((CUSTOMERS || []).join(', '))}.</p><p class="small muted">Also excluded: other ledger vendors, infrastructure partners, consultancies and staffing firms, plus anything on the exclude list in Settings.</p></div></div>`;
 }
 
 /* ---------- theme ---------- */
@@ -448,8 +421,7 @@ function renderPipeline(){
   const k = S.data.keys, s = S.data.settings;
   const items = [
     [k.anthropic.set, 'Anthropic key (needed for every step)'],
-    [k.firecrawl.set, 'Firecrawl key (research; also sourcing if TheirStack is not set)'],
-    [k.theirstack.set, 'TheirStack key (recommended for sourcing; optional)'],
+    [k.firecrawl.set, 'Firecrawl key (news sourcing and research)'],
     [k.apollo.set || k.hunter.set, 'Apollo or Hunter key (people and emails; optional, LinkedIn links work without it)'],
     [!!s.sender.name, 'Sender name (needed for drafts)'],
     [s.email.provider !== 'none' && (k.resend.set || k.smtpPass.set) && !!s.sender.fromEmail, 'Email provider and from address (needed to send; optional)']
@@ -474,7 +446,7 @@ function stageCounts(){
     drafts: a.reduce((n, x) => n + (x.score.tier === '1' ? (x.contacts||[]).filter(c => !c.placeholder && c.email && !c.draft).length : 0), 0)
   };
 }
-const LIMIT_LABELS = { anthropic:'Claude calls', firecrawl:'Firecrawl calls', theirstack:'TheirStack jobs', apollo:'Apollo calls', hunter:'Hunter calls' };
+const LIMIT_LABELS = { anthropic:'Claude calls', firecrawl:'Firecrawl calls', apollo:'Apollo calls', hunter:'Hunter calls' };
 function renderUsage(){
   const u = S.data.usage || {}, l = S.data.settings.limits || {};
   $('#usageLine').textContent = 'Used today: ' + Object.keys(LIMIT_LABELS).filter(k => S.data.keys[k]?.set).map(k => `${LIMIT_LABELS[k]} ${Number(u[k]) || 0} of ${l[k] ?? '—'}`).join(' · ');
@@ -521,7 +493,7 @@ $('#stopBtn').onclick = () => { if (S.run) { S.run.stop = true; $('#runMsg').tex
 $('#refreshLog').onclick = () => load().catch(() => {});
 
 /* ---------- accounts ---------- */
-function srcKind(a){ return a.competitorOf ? 'comp' : /portal|feed|tsenta|theirstack/i.test(a.source || '') ? 'jobs' : 'manual'; }
+function srcKind(a){ return a.competitorOf ? 'comp' : /news|feed|list|paste|search|import/i.test(a.source || '') && !/hand/i.test(a.source || '') ? 'jobs' : 'manual'; }
 function filtered(){
   const q = $('#q').value.trim().toLowerCase(), tf = $('#tierFilter').value, sf = $('#srcFilter').value;
   const rank = t => ({'1':0,'3':1,'2':2}[t] ?? (t ? 4 : 3));
@@ -534,7 +506,7 @@ function filtered(){
 }
 function renderList(){
   const el = $('#list'), all = S.data.accounts;
-  if (!all.length){ el.innerHTML = `<div class="empty"><h3>No accounts yet</h3><p class="muted">Run the pipeline to source companies from job portals, or import some by hand.</p><button class="btn primary" type="button" onclick="setView('pipeline')">Go to Run</button></div>`; $('#count').textContent = ''; return; }
+  if (!all.length){ el.innerHTML = `<div class="empty"><h3>No accounts yet</h3><p class="muted">Run the pipeline to source companies from news and launches, or import some by hand.</p><button class="btn primary" type="button" onclick="setView('pipeline')">Go to Run</button></div>`; $('#count').textContent = ''; return; }
   const rows = filtered(); $('#count').textContent = `${rows.length} of ${all.length}`;
   if (!rows.length){ el.innerHTML = '<div class="empty"><p class="muted">No accounts match these filters.</p></div>'; return; }
   el.innerHTML = `<div class="list">${rows.map(a => {
@@ -565,21 +537,20 @@ function renderDetail(){
     <div class="row-actions">${tierChip(a.score.tier)}<button class="btn primary" type="button" id="doResearch" ${S.busy.research ? 'disabled' : ''}>${S.busy.research ? 'Researching…' : (r ? 'Research again' : 'Research')}</button></div></div>
     <div class="panel-b">${msgHtml('research')}
       <div class="scores"><div class="score"><span>Fit</span><b>${a.score.fit}<span style="font-size:14px"> / 50</span></b></div><div class="score"><span>Timing</span><b>${a.score.tier ? Math.round(a.score.timing) : '–'}<span style="font-size:14px"> / 50</span></b></div><div class="score"><span>CRM stage</span><b style="font-size:20px;padding-top:6px">${esc(a.stage)}</b></div></div>
-      ${r?.summary ? `<p>${esc(r.summary)}</p>` : '<p class="muted small">Not researched yet. Research reads the website, careers page, news and job posts, works out how money moves through the product, then scores the account.</p>'}
+      ${r?.summary ? `<p>${esc(r.summary)}</p>` : '<p class="muted small">Not researched yet. Research reads the website, news and launch coverage, works out how money moves through the product and how far it is automating it, then scores the account.</p>'}
       ${(r?.disqualifiers || []).length ? `<p class="warntxt">Possible disqualifiers: ${esc(r.disqualifiers.join('; '))}</p>` : ''}
       ${a.notes ? `<p class="note">${esc(a.notes)}</p>` : ''}
     </div></div>
   ${(a.signals.length || r) ? `<div class="panel"><div class="panel-h"><h3>Signals</h3><span class="small faint">weight after decay</span></div><div class="panel-b">
     ${a.signals.map(x => `<div class="signal"><div class="row-actions" style="justify-content:space-between"><b style="font-weight:500">${esc(x.label)}</b><span class="mono small">${x.cur} / ${x.weight}</span></div><q>${esc(x.quote)}</q><span class="small muted">${x.date ? esc(fmtDate(x.date)) + ` (${x.age} days ago)` : 'Date unknown'}${x.why ? ' · ' + esc(x.why) : ''}</span>${x.origin === 'feed' ? (x.url ? `<a class="src" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.url)}</a>` : `<span class="src">From ${esc(x.feed || 'a job feed')}</span>`) : srcLink(x.source)}</div>`).join('') || '<p class="muted small">No signals found.</p>'}
-    ${r?.stack ? `<div class="signal"><b style="font-weight:500">Ledger stack: ${esc(lab(ICP.stack, a.stackOverride || r.stack.landscape))}</b>${r.stack.evidence ? `<q>${esc(r.stack.evidence)}</q>` : ''}${srcLink(r.stack.source)}</div>` : ''}
+    ${r?.stack ? `<div class="signal"><b style="font-weight:500">Technology fit: ${esc(lab(ICP.stack, a.stackOverride || r.stack.landscape))}</b>${r.stack.evidence ? `<q>${esc(r.stack.evidence)}</q>` : ''}${srcLink(r.stack.source)}</div>` : ''}
   </div></div>` : ''}
   <div class="panel"><div class="panel-h"><h3>Fit details</h3><span class="small faint">edit to rescore</span></div><div class="panel-b">
     <div class="tablewrap"><table><thead><tr><th>Factor</th><th>Value</th><th class="num">Points</th></tr></thead><tbody>${a.score.parts.map(p => `<tr><td>${esc(p[0])}</td><td>${esc(p[1])}</td><td class="num">${p[2]} / ${p[3]}</td></tr>`).join('')}</tbody></table></div>
     <form id="fitForm" class="grid3">
       ${sel('e-industry','Segment',ICP.industries,a.industry)}${sel('e-revenue','Funding stage',ICP.revenue,a.revenue)}${sel('e-geo','HQ',ICP.geo,a.geo)}${sel('e-own','Money movement',ICP.own,a.ownership)}
-      <label class="f" for="e-stack">Ledger stack<select id="e-stack"><option value="">From research</option>${ICP.stack.map(o => `<option value="${o.k}"${o.k === a.stackOverride ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>
+      <label class="f" for="e-stack">Technology fit<select id="e-stack"><option value="">From research</option>${ICP.stack.map(o => `<option value="${o.k}"${o.k === a.stackOverride ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>
       <label class="f" for="e-stage">CRM stage<select id="e-stage">${ICP.stages.map(s => `<option${s === a.stage ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
-      <label class="f" for="e-careers">Careers page<input id="e-careers" value="${esc(a.careersUrl || '')}"></label>
       <label class="f" for="e-news">Newsroom<input id="e-news" value="${esc(a.newsUrl || '')}"></label>
       <label class="f" for="e-owner">Owner<input id="e-owner" value="${esc(a.owner || '')}"></label>
       <label class="f" for="e-notes" style="grid-column:1/-1">Notes<textarea id="e-notes" rows="2">${esc(a.notes || '')}</textarea></label>
@@ -631,7 +602,7 @@ function bindDetail(a){
   const da = $('#delAsk'); if (da) da.onclick = () => { S.confirmDel = id; renderDetail(); };
   const dn = $('#delNo'); if (dn) dn.onclick = () => { S.confirmDel = null; renderDetail(); };
   const dy = $('#delYes'); if (dy) dy.onclick = async () => { try { await api('accounts', { action:'delete', id }); S.data.accounts = S.data.accounts.filter(x => x.id !== id); S.sel = null; S.confirmDel = null; renderList(); renderDetail(); } catch(e){ S.msgs.research = { ok:false, text:e.message }; renderDetail(); } };
-  $('#fitForm').onsubmit = ev => { ev.preventDefault(); act({ action:'update', id, patch:{ industry:$('#e-industry').value, revenue:$('#e-revenue').value, geo:$('#e-geo').value, ownership:$('#e-own').value, stackOverride:$('#e-stack').value, stage:$('#e-stage').value, careersUrl:$('#e-careers').value.trim(), newsUrl:$('#e-news').value.trim(), owner:$('#e-owner').value.trim(), notes:$('#e-notes').value } }, 'fit'); };
+  $('#fitForm').onsubmit = ev => { ev.preventDefault(); act({ action:'update', id, patch:{ industry:$('#e-industry').value, revenue:$('#e-revenue').value, geo:$('#e-geo').value, ownership:$('#e-own').value, stackOverride:$('#e-stack').value, stage:$('#e-stage').value, newsUrl:$('#e-news').value.trim(), owner:$('#e-owner').value.trim(), notes:$('#e-notes').value } }, 'fit'); };
   $('#contactForm').onsubmit = ev => { ev.preventDefault(); act({ action:'addContact', id, contact:{ name:$('#c-name').value, title:$('#c-title').value, email:$('#c-email').value, linkedin:$('#c-li').value } }, 'contact'); };
   $('#detail').querySelectorAll('.contact[data-i]').forEach(box => {
     const i = Number(box.dataset.i);
@@ -705,26 +676,6 @@ $('#exportBtn').onclick = async () => {
     setTimeout(() => URL.revokeObjectURL(a.href), 4000); m.className = 'small okline'; m.textContent = 'Downloaded.';
   } catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
 };
-/* ---------- Tsenta via Claude in Chrome ---------- */
-const TSENTA_DEFAULT = 'https://dashboard.tsenta.com/dashboard/recommendations';
-function tsentaUrl(){ return ($('#tsentaUrl').value || '').trim() || (S.data?.settings?.tsentaUrl) || TSENTA_DEFAULT; }
-function tsentaPrompt(){
-  return `Pull new job postings from Tsenta into Deal Desk.
-
-1. Open ${tsentaUrl()}. If Tsenta asks me to sign in or create an account, stop and tell me. I'll do it myself and ask you again.
-2. On the recommendations page, scroll until no more jobs load. For each job, note the company, job title, location and how long ago it was posted. Don't apply to, save or dismiss any job.
-3. Open ${location.origin}/#import (Deal Desk, already signed in on this browser).
-4. In "Paste a jobs feed", type Tsenta in Source, then paste the jobs into Pasted text, one per line: Company — Title — Location — Posted.
-5. Click "Import feed" and tell me the result shown under the button.`;
-}
-function renderTsenta(){ if (!$('#tsentaUrl').value) $('#tsentaUrl').value = S.data?.settings?.tsentaUrl || TSENTA_DEFAULT; $('#tsentaPrompt').value = tsentaPrompt(); }
-$('#tsentaUrl').onchange = async () => { const u = $('#tsentaUrl').value.trim(); $('#tsentaPrompt').value = tsentaPrompt(); try { const r = await api('settings', { settings: { tsentaUrl: u } }); S.data.settings = r.settings; } catch(e){} };
-$('#tsentaBtn').onclick = async () => {
-  const m = $('#tsentaMsg'), text = tsentaPrompt(); $('#tsentaPrompt').value = text;
-  window.open(tsentaUrl(), '_blank', 'noopener');
-  try { await navigator.clipboard.writeText(text); m.className = 'small okline'; m.textContent = 'Tsenta opened and the instruction is copied. Paste it into Claude in Chrome on that tab.'; }
-  catch(e){ m.className = 'small faint'; m.textContent = 'Tsenta opened. Copy the instruction below and paste it into Claude in Chrome.'; $('#tsentaPrompt').closest('details').open = true; $('#tsentaPrompt').select(); }
-};
 $('#feedBtn').onclick = async () => {
   const m = $('#feedMsg'), t = $('#feed').value.trim(), src = $('#feedSource').value.trim();
   if (!t){ m.className = 'small errtxt'; m.textContent = 'Paste the page text first.'; return; }
@@ -792,16 +743,13 @@ function renderSettings(){
   if (!owner){
     $('#keysBody').innerHTML = Object.entries(k).filter(([, v]) => !v.placeholder).map(([, v]) => `<div class="keyrow"><div><b style="font-weight:500">${esc(v.label)}</b></div><div></div><div class="row-actions">${v.set ? '<span class="chip ok">connected</span>' : '<span class="chip">not connected</span>'}</div></div>`).join('');
   } else {
-  const help = { anthropic:'console.anthropic.com → API keys', firecrawl:'firecrawl.dev → API keys', theirstack:'app.theirstack.com → Settings → API key. Used for sourcing when set; 1 credit per job returned', apollo:'Apollo → Settings → Integrations → API (People Search needs a paid plan)', hunter:'hunter.io → API', resend:'resend.com → API keys (verify your sending domain)', smtpPass:'For Gmail: an app password from your Google account', zoominfo:'Coming later', clay:'Coming later', rocketreach:'Coming later' };
+  const help = { anthropic:'console.anthropic.com → API keys', firecrawl:'firecrawl.dev → API keys', apollo:'Apollo → Settings → Integrations → API (People Search needs a paid plan)', hunter:'hunter.io → API', resend:'resend.com → API keys (verify your sending domain)', smtpPass:'For Gmail: an app password from your Google account', zoominfo:'Coming later', clay:'Coming later', rocketreach:'Coming later' };
   $('#keysBody').innerHTML = Object.entries(k).map(([id, v]) => `<div class="keyrow"><div><b style="font-weight:500">${esc(v.label)}</b>${v.placeholder ? ' <span class="chip">placeholder</span>' : ''}<br><span class="small faint">${esc(help[id] || '')}</span></div>
     <input type="password" autocomplete="off" data-key="${id}" placeholder="${v.set ? 'Saved, ending ' + esc(v.last4) : (v.placeholder ? 'Not used yet' : 'Paste key')}" ${v.source === 'environment' || v.placeholder ? 'disabled' : ''} aria-label="${esc(v.label)} key">
     <div class="row-actions">${v.set ? `<span class="chip ok">${v.source === 'environment' ? 'env' : 'set'}</span>${v.source === 'settings' ? `<button class="btn sm k-clear" type="button" data-key="${id}">Remove</button>` : ''}` : '<span class="chip">not set</span>'}</div></div>`).join('');
   $('#keysBody').querySelectorAll('.k-clear').forEach(b => b.onclick = async () => { try { const r = await api('settings', { keys: { [b.dataset.key]: null } }); S.data.keys = r.keys; renderSettings(); } catch(e){} });
   }
-  const ts = s.theirstack || {};
-  $('#ts-titles').value = (ts.titles || []).join('\n'); $('#ts-not').value = (ts.titlesNot || []).join('\n'); $('#ts-tech').value = (ts.technologySlugs || []).join('\n'); $('#ts-desc').value = (ts.descriptionPatterns || []).join('\n');
-  $('#ts-countries').value = (ts.countries || []).join(', '); $('#ts-min').value = ts.minEmployees ?? ''; $('#ts-max').value = ts.maxEmployees ?? ''; $('#ts-age').value = ts.maxAgeDays ?? 7; $('#ts-limit').value = ts.limit ?? 50;
-  $('#s-roles').value = s.roles.join('\n'); $('#s-portals').value = s.portals.join('\n'); $('#s-recency').value = s.recency || '';
+  $('#s-queries').value = (s.sourceQueries || []).join('\n'); $('#s-recency').value = s.recency || '';
   $('#s-maxnew').value = s.maxNewCompaniesPerRun; $('#s-comp').value = s.competitorsPerAccount; $('#s-autoemail').checked = !!s.autoFindEmails; $('#s-maxemail').value = s.maxEmailLookupsPerRun; $('#s-autodraft').checked = !!s.autoDraft;
   $('#s-exclude').value = (s.excludeExtra || []).join('\n'); $('#s-name').value = s.sender.name; $('#s-title').value = s.sender.title; $('#s-from').value = s.sender.fromEmail; $('#s-footer').value = s.sender.footer;
   $('#s-provider').value = s.email.provider; $('#s-cap').value = s.email.dailyCap; $('#s-smtpuser').value = s.email.smtpUser; $('#s-smtphost').value = s.email.smtpHost; $('#s-smtpport').value = s.email.smtpPort;
@@ -828,7 +776,7 @@ $('#setForm').onsubmit = async ev => {
   ev.preventDefault(); const m = $('#setMsg');
   const from = $('#s-from').value.trim();
   if (from && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(from)){ m.className = 'small errtxt'; m.textContent = 'The from email doesn\'t look right.'; return; }
-  const settings = { theirstack: { titles: lines($('#ts-titles').value), titlesNot: lines($('#ts-not').value), technologySlugs: lines($('#ts-tech').value), descriptionPatterns: lines($('#ts-desc').value), countries: $('#ts-countries').value.split(/[\s,]+/).filter(Boolean), minEmployees: $('#ts-min').value, maxEmployees: $('#ts-max').value, maxAgeDays: $('#ts-age').value, limit: $('#ts-limit').value }, roles: lines($('#s-roles').value), portals: lines($('#s-portals').value).map(x => x.replace(/^https?:\/\//, '')), recency: $('#s-recency').value, maxNewCompaniesPerRun: $('#s-maxnew').value, competitorsPerAccount: $('#s-comp').value, autoFindEmails: $('#s-autoemail').checked, maxEmailLookupsPerRun: $('#s-maxemail').value, autoDraft: $('#s-autodraft').checked, excludeExtra: lines($('#s-exclude').value), sender: { name: $('#s-name').value.trim(), title: $('#s-title').value.trim(), fromEmail: from, footer: $('#s-footer').value.trim() }, email: { provider: $('#s-provider').value, dailyCap: $('#s-cap').value, smtpUser: $('#s-smtpuser').value.trim(), smtpHost: $('#s-smtphost').value.trim(), smtpPort: $('#s-smtpport').value }, optOut: lines($('#s-optout').value), modelSmart: $('#s-msmart').value.trim() || 'claude-sonnet-5-5', modelFast: $('#s-mfast').value.trim() || 'claude-haiku-5-5' };
+  const settings = { sourceQueries: lines($('#s-queries').value), recency: $('#s-recency').value, maxNewCompaniesPerRun: $('#s-maxnew').value, competitorsPerAccount: $('#s-comp').value, autoFindEmails: $('#s-autoemail').checked, maxEmailLookupsPerRun: $('#s-maxemail').value, autoDraft: $('#s-autodraft').checked, excludeExtra: lines($('#s-exclude').value), sender: { name: $('#s-name').value.trim(), title: $('#s-title').value.trim(), fromEmail: from, footer: $('#s-footer').value.trim() }, email: { provider: $('#s-provider').value, dailyCap: $('#s-cap').value, smtpUser: $('#s-smtpuser').value.trim(), smtpHost: $('#s-smtphost').value.trim(), smtpPort: $('#s-smtpport').value }, optOut: lines($('#s-optout').value), modelSmart: $('#s-msmart').value.trim() || 'claude-sonnet-5-5', modelFast: $('#s-mfast').value.trim() || 'claude-haiku-5-5' };
   try { const r = await api('settings', { settings }); S.data.settings = r.settings; m.className = 'small okline'; m.textContent = 'Saved.'; } catch(e){ m.className = 'small errtxt'; m.textContent = e.message; }
 };
 
